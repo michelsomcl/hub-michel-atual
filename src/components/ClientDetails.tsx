@@ -17,6 +17,7 @@ interface ClientDetailsProps {
   onTaskAdd: (task: Task) => void;
   onTaskComplete: (taskId: string, completed: boolean) => void;
   onEditClick: () => void;
+  isSaving?: boolean;
 }
 
 export const ClientDetails = ({
@@ -26,6 +27,7 @@ export const ClientDetails = ({
   onTaskAdd,
   onTaskComplete,
   onEditClick,
+  isSaving = false,
 }: ClientDetailsProps) => {
   const [newTask, setNewTask] = useState("");
   const [taskDueDate, setTaskDueDate] = useState("");
@@ -68,7 +70,7 @@ export const ClientDetails = ({
           </div>
         </div>
         
-        <Button onClick={onEditClick} className="btn-secondary">
+        <Button onClick={onEditClick} className="btn-secondary" disabled={isSaving}>
           Editar Cliente
         </Button>
       </div>
@@ -106,7 +108,8 @@ export const ClientDetails = ({
             <h3 className="text-lg font-medium mb-4">Novo Atendimento</h3>
             <ServiceHistoryForm 
               clientId={client.id} 
-              onSubmit={onServiceHistoryAdd} 
+              onSubmit={onServiceHistoryAdd}
+              disabled={isSaving} 
             />
           </div>
           
@@ -160,7 +163,7 @@ export const ClientDetails = ({
                 />
               </div>
               
-              <Button type="submit" className="btn-primary">
+              <Button type="submit" className="btn-primary" disabled={isSaving}>
                 Adicionar Tarefa
               </Button>
             </form>

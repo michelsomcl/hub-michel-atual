@@ -5,28 +5,45 @@ import { Layout } from "../components/Layout";
 import { ClientForm } from "../components/ClientForm";
 import { Client, Tag } from "../types";
 import { toast } from "@/hooks/use-toast";
-import { getClients, saveClients, getTags } from "../services/localStorage";
+import { supabase } from "../integrations/supabase/client";
+import { useTags } from "../hooks/useTags";
 
 const NewClient = () => {
   const navigate = useNavigate();
-  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const { tags, createTag } = useTags();
   const [isLoading, setIsLoading] = useState(false);
-
-  // Load tags from Supabase when component mounts
-  useEffect(() => {
-    const loadTags = async () => {
-      const loadedTags = await getTags();
-      setAvailableTags(loadedTags);
-    };
-    loadTags();
-  }, []);
 
   const handleSubmit = async (client: Client) => {
     setIsLoading(true);
     try {
-      // Get current clients and add the new one
-      const currentClients = await getClients();
-      await saveClients([...currentClients, client]);
+      // Insert client into Supabase
+      const { error: clientError } = await supabase
+        .from("clients")
+        .insert({
+          id: client.id,
+          name: client.name,
+          phone: client.phone,
+          source: client.source,
+          level: client.level,
+          created_at: client.createdAt.toISOString(),
+          updated_at: client.updatedAt.toISOString(),
+        });
+
+      if (clientError) throw clientError;
+
+      // Handle tags if present
+      if (client.tags.length > 0) {
+        const client_tags = client.tags.map(tag => ({
+          client_id: client.id,
+          tag_id: tag.id
+        }));
+
+        const { error: tagsError } = await supabase
+          .from("client_tags")
+          .insert(client_tags);
+
+        if (tagsError) throw tagsError;
+      }
       
       toast({
         title: "Cliente adicionado",
@@ -47,25 +64,7 @@ const NewClient = () => {
   };
   
   const handleCreateTag = async (tag: Tag) => {
-    try {
-      // Update state with new tag
-      setAvailableTags(prevTags => [...prevTags, tag]);
-      
-      // Save to Supabase (local state is already updated)
-      await saveTags([...availableTags, tag]);
-      
-      toast({
-        title: "Tag criada",
-        description: `A tag "${tag.name}" foi criada com sucesso.`
-      });
-    } catch (error) {
-      console.error("Erro ao criar tag:", error);
-      toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao criar a tag.",
-        variant: "destructive"
-      });
-    }
+    await createTag(tag);
   };
 
   return (
@@ -80,7 +79,7 @@ const NewClient = () => {
         
         <div className="bg-white p-6 rounded-lg border">
           <ClientForm 
-            availableTags={availableTags}
+            availableTags={tags}
             onSubmit={handleSubmit}
             onCreateTag={handleCreateTag}
             isLoading={isLoading}
