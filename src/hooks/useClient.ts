@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Client, ServiceHistory, Task, Tag } from "../types";
+import { Client, ServiceHistory, Task, Tag, ClientLevel } from "../types";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "../integrations/supabase/client";
 
@@ -60,13 +60,19 @@ export const useClient = (initialClient?: Client | null) => {
         })) || [];
       }
 
+      // Ensure clientData.level is a valid ClientLevel type
+      const level = clientData.level as ClientLevel;
+      if (level !== 'Lead' && level !== 'Cliente') {
+        throw new Error(`Invalid client level: ${level}`);
+      }
+
       // Construct the complete client object
       const completeClient: Client = {
         id: clientData.id,
         name: clientData.name,
         phone: clientData.phone,
         source: clientData.source,
-        level: clientData.level,
+        level: level,
         createdAt: new Date(clientData.created_at),
         updatedAt: new Date(clientData.updated_at),
         serviceHistory: serviceHistoryData?.map((sh) => ({
