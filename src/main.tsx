@@ -5,8 +5,10 @@ import App from './App';
 import './index.css';
 import { initializeLocalStorage } from './services/localStorage';
 
-// Inicializar localStorage ao iniciar o aplicativo
-initializeLocalStorage();
+// Inicializar dados do Supabase ao iniciar o aplicativo
+(async () => {
+  await initializeLocalStorage();
+})();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

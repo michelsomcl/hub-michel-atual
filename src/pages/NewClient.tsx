@@ -10,34 +10,62 @@ import { getClients, saveClients, getTags } from "../services/localStorage";
 const NewClient = () => {
   const navigate = useNavigate();
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Load tags from localStorage when component mounts
+  // Load tags from Supabase when component mounts
   useEffect(() => {
-    const loadedTags = getTags();
-    setAvailableTags(loadedTags);
+    const loadTags = async () => {
+      const loadedTags = await getTags();
+      setAvailableTags(loadedTags);
+    };
+    loadTags();
   }, []);
 
-  const handleSubmit = (client: Client) => {
-    // Get current clients and add the new one
-    const currentClients = getClients();
-    saveClients([...currentClients, client]);
-    
-    toast({
-      title: "Cliente adicionado",
-      description: "O cliente foi adicionado com sucesso."
-    });
-    
-    navigate("/clients");
+  const handleSubmit = async (client: Client) => {
+    setIsLoading(true);
+    try {
+      // Get current clients and add the new one
+      const currentClients = await getClients();
+      await saveClients([...currentClients, client]);
+      
+      toast({
+        title: "Cliente adicionado",
+        description: "O cliente foi adicionado com sucesso."
+      });
+      
+      navigate("/clients");
+    } catch (error) {
+      console.error("Erro ao adicionar cliente:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao adicionar o cliente.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
   
-  const handleCreateTag = (tag: Tag) => {
-    // Update state with new tag
-    setAvailableTags(prevTags => [...prevTags, tag]);
-    
-    toast({
-      title: "Tag criada",
-      description: `A tag "${tag.name}" foi criada com sucesso.`
-    });
+  const handleCreateTag = async (tag: Tag) => {
+    try {
+      // Update state with new tag
+      setAvailableTags(prevTags => [...prevTags, tag]);
+      
+      // Save to Supabase (local state is already updated)
+      await saveTags([...availableTags, tag]);
+      
+      toast({
+        title: "Tag criada",
+        description: `A tag "${tag.name}" foi criada com sucesso.`
+      });
+    } catch (error) {
+      console.error("Erro ao criar tag:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao criar a tag.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -55,6 +83,7 @@ const NewClient = () => {
             availableTags={availableTags}
             onSubmit={handleSubmit}
             onCreateTag={handleCreateTag}
+            isLoading={isLoading}
           />
         </div>
       </div>
