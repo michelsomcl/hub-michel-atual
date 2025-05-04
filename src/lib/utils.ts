@@ -1,9 +1,14 @@
 
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { v4 as uuidv4 } from 'uuid';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+export function generateId(): string {
+  return uuidv4();
 }
 
 export function formatDate(date: Date | string): string {
@@ -18,10 +23,6 @@ export function formatDateTime(date: Date | string): string {
     date = new Date(date);
   }
   return date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-}
-
-export function generateId(): string {
-  return Math.random().toString(36).substring(2, 11);
 }
 
 export function formatPhoneNumber(phone: string): string {

@@ -2,7 +2,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Client } from "../types";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatPhoneNumber } from "../lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Trash } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { getClients, saveClients } from "../services/localStorage";
+import { deleteClient } from "../services/supabaseClient";
 
 interface ClientListProps {
   clients: Client[];
@@ -19,27 +18,39 @@ interface ClientListProps {
 export const ClientList = ({ clients }: ClientListProps) => {
   const navigate = useNavigate();
 
-  const handleDeleteClient = (clientId: string, event: React.MouseEvent) => {
+  const handleDeleteClient = async (clientId: string, event: React.MouseEvent) => {
     event.stopPropagation();
     
-    // Get current clients and filter out the one to delete
-    const currentClients = getClients();
-    const updatedClients = currentClients.filter(client => client.id !== clientId);
+    if (!confirm("Tem certeza que deseja excluir este cliente?")) {
+      return;
+    }
     
-    // Save updated clients list to localStorage
-    saveClients(updatedClients);
-    
-    // Show confirmation toast
-    toast({
-      title: "Cliente excluído",
-      description: "O cliente foi excluído com sucesso."
-    });
-    
-    // Force a page reload to refresh the client list
-    window.location.reload();
+    try {
+      const success = await deleteClient(clientId);
+      
+      if (success) {
+        // Mostrar mensagem de confirmação
+        toast({
+          title: "Cliente excluído",
+          description: "O cliente foi excluído com sucesso."
+        });
+        
+        // Forçar atualização da página para atualizar a lista
+        window.location.reload();
+      } else {
+        throw new Error("Não foi possível excluir o cliente");
+      }
+    } catch (error) {
+      console.error("Erro ao excluir cliente:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o cliente. Tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
 
-  // Sort clients alphabetically by name
+  // Ordenar clientes alfabeticamente por nome
   const sortedClients = [...clients].sort((a, b) => 
     a.name.localeCompare(b.name)
   );

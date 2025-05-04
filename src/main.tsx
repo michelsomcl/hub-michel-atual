@@ -3,10 +3,10 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
-import { initializeLocalStorage } from './services/localStorage';
+import { initializeDatabase } from './services/supabaseClient';
 
-// Inicializar localStorage ao iniciar o aplicativo
-initializeLocalStorage();
+// Inicializar o banco de dados no Supabase ao iniciar o aplicativo
+initializeDatabase();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

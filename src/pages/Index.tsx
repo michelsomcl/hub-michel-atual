@@ -2,12 +2,13 @@
 import React, { useEffect, useState } from "react";
 import { Layout } from "../components/Layout";
 import { Client } from "../types";
-import { getClients, getTags, initializeLocalStorage } from "../services/localStorage";
+import { getClients, getTags } from "../services/supabaseClient";
 import { DashboardHeader } from "../components/dashboard/DashboardHeader";
 import { SummaryCards } from "../components/dashboard/SummaryCards";
 import { FilteredClientsList } from "../components/dashboard/FilteredClientsList";
 import { RecentClientsCard } from "../components/dashboard/RecentClientsCard";
 import { MiniCalendarCard } from "../components/dashboard/MiniCalendarCard";
+import { toast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [totalClients, setTotalClients] = useState(0);
@@ -19,34 +20,51 @@ const Index = () => {
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [filterTitle, setFilterTitle] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    initializeLocalStorage();
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Carregar clientes do Supabase
+        const clients = await getClients();
+        setAllClients(clients);
+        
+        setTotalClients(clients.length);
+        
+        setTotalLeads(clients.filter(client => client.level === "Lead").length);
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        setClientsToday(clients.filter(client => {
+          const clientDate = new Date(client.createdAt);
+          clientDate.setHours(0, 0, 0, 0);
+          return clientDate.getTime() === today.getTime();
+        }).length);
+        
+        const totalPendingTasks = clients.reduce((total, client) => {
+          return total + client.tasks.filter(task => !task.completed).length;
+        }, 0);
+        setPendingTasks(totalPendingTasks);
+        
+        const sortedClients = [...clients].sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setRecentClients(sortedClients.slice(0, 5));
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os dados. Tente novamente.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    const clients = getClients();
-    setAllClients(clients);
-    
-    setTotalClients(clients.length);
-    
-    setTotalLeads(clients.filter(client => client.level === "Lead").length);
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    setClientsToday(clients.filter(client => {
-      const clientDate = new Date(client.createdAt);
-      clientDate.setHours(0, 0, 0, 0);
-      return clientDate.getTime() === today.getTime();
-    }).length);
-    
-    const totalPendingTasks = clients.reduce((total, client) => {
-      return total + client.tasks.filter(task => !task.completed).length;
-    }, 0);
-    setPendingTasks(totalPendingTasks);
-    
-    const sortedClients = [...clients].sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-    setRecentClients(sortedClients.slice(0, 5));
+    fetchData();
   }, []);
   
   const handleCardClick = (filterKey: string, title: string) => {

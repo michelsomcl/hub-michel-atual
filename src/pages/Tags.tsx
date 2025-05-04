@@ -1,171 +1,187 @@
 
 import React, { useState, useEffect } from "react";
 import { Layout } from "../components/Layout";
-import { Tag } from "../types";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { generateId } from "../lib/utils";
-import { toast } from "@/hooks/use-toast";
 import { TagsHeader } from "../components/TagsHeader";
 import { TagsList } from "../components/TagsList";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tag } from "../types";
+import { toast } from "@/hooks/use-toast";
+import { getTags, saveTag, deleteTag } from "../services/supabaseClient";
 import { TagForm } from "../components/TagForm";
-import { getTags, saveTags } from "../services/localStorage";
+import { generateId } from "../lib/utils";
 
 const Tags = () => {
   const [tags, setTags] = useState<Tag[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingTag, setEditingTag] = useState<Tag | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentTag, setCurrentTag] = useState<Tag | null>(null);
   const [tagName, setTagName] = useState("");
   const [error, setError] = useState("");
-  
-  // Carregar tags do localStorage quando o componente montar
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Carregar tags quando o componente montar
   useEffect(() => {
-    const storedTags = getTags();
-    // Sort tags alphabetically
-    const sortedTags = [...storedTags].sort((a, b) => a.name.localeCompare(b.name));
-    setTags(sortedTags);
+    const loadTags = async () => {
+      try {
+        setIsLoading(true);
+        const tagsData = await getTags();
+        setTags(tagsData);
+      } catch (error) {
+        console.error("Erro ao carregar tags:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar as tags. Tente novamente.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadTags();
   }, []);
 
-  const handleAddTag = () => {
+  const handleAddClick = () => {
     setTagName("");
-    setEditingTag(null);
     setError("");
+    setIsEditing(false);
+    setCurrentTag(null);
     setIsDialogOpen(true);
   };
-  
-  const handleEditTag = (tag: Tag) => {
+
+  const handleEditClick = (tag: Tag) => {
     setTagName(tag.name);
-    setEditingTag(tag);
     setError("");
+    setIsEditing(true);
+    setCurrentTag(tag);
     setIsDialogOpen(true);
   };
-  
-  const handleDeleteTag = (tagId: string) => {
-    const updatedTags = tags.filter(tag => tag.id !== tagId);
-    setTags(updatedTags);
-    saveTags(updatedTags);
-    
-    toast({
-      title: "Tag excluída",
-      description: "A tag foi removida com sucesso."
-    });
+
+  const handleDeleteClick = async (tagId: string) => {
+    try {
+      // Confirmar exclusão
+      if (!confirm("Tem certeza que deseja excluir esta tag? Isso removerá a tag de todos os clientes que a utilizam.")) {
+        return;
+      }
+      
+      const success = await deleteTag(tagId);
+      
+      if (!success) {
+        throw new Error("Erro ao excluir tag");
+      }
+      
+      // Atualizar lista local de tags
+      setTags(prev => prev.filter(tag => tag.id !== tagId));
+      
+      toast({
+        title: "Tag excluída",
+        description: "A tag foi excluída com sucesso."
+      });
+    } catch (error) {
+      console.error("Erro ao excluir tag:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir a tag. Tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
-  
-  const handleDialogSubmit = (e: React.FormEvent) => {
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!tagName.trim()) return;
     
     const trimmedName = tagName.trim();
     
-    let updatedTags: Tag[];
-    let tagExists = false;
+    // Verificar se o nome da tag já existe
+    const tagExists = tags.some(tag => 
+      tag.name.toLowerCase() === trimmedName.toLowerCase() && 
+      (!currentTag || tag.id !== currentTag.id)
+    );
     
-    if (editingTag) {
-      // Check if another tag with same name exists (when editing)
-      tagExists = tags.some(
-        tag => tag.id !== editingTag.id && 
-        tag.name.toLowerCase() === trimmedName.toLowerCase()
-      );
-      
-      if (tagExists) {
-        setError("Tag já cadastrada");
-        toast({
-          title: "Erro",
-          description: "Tag já cadastrada",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      // Update existing tag
-      updatedTags = tags.map(tag => 
-        tag.id === editingTag.id 
-          ? { ...tag, name: trimmedName } 
-          : tag
-      );
-      
-      toast({
-        title: "Tag atualizada",
-        description: `A tag "${trimmedName}" foi atualizada com sucesso.`
-      });
-    } else {
-      // Check if tag with same name already exists (when creating new)
-      tagExists = tags.some(
-        tag => tag.name.toLowerCase() === trimmedName.toLowerCase()
-      );
-      
-      if (tagExists) {
-        setError("Tag já cadastrada");
-        toast({
-          title: "Erro",
-          description: "Tag já cadastrada",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      // Create new tag
-      const newTag: Tag = {
-        id: generateId(),
-        name: trimmedName,
-        createdAt: new Date()
-      };
-      
-      updatedTags = [...tags, newTag];
-      
-      toast({
-        title: "Tag criada",
-        description: `A tag "${trimmedName}" foi criada com sucesso.`
-      });
+    if (tagExists) {
+      setError("Tag já cadastrada");
+      return;
     }
     
-    // Sort tags alphabetically
-    const sortedTags = updatedTags.sort((a, b) => a.name.localeCompare(b.name));
-    
-    // Atualizar estado e salvar no localStorage
-    setTags(sortedTags);
-    saveTags(sortedTags);
-    setIsDialogOpen(false);
-    setError("");
-  };
-  
-  const handleClose = () => {
-    setIsDialogOpen(false);
-    setEditingTag(null);
-    setError("");
+    try {
+      let tagToSave: Tag;
+      
+      if (isEditing && currentTag) {
+        // Atualizar tag existente
+        tagToSave = {
+          ...currentTag,
+          name: trimmedName
+        };
+      } else {
+        // Criar nova tag
+        tagToSave = {
+          id: generateId(),
+          name: trimmedName,
+          createdAt: new Date()
+        };
+      }
+      
+      const savedTag = await saveTag(tagToSave);
+      
+      if (!savedTag) {
+        throw new Error("Erro ao salvar tag");
+      }
+      
+      // Atualizar lista local de tags
+      setTags(prev => {
+        if (isEditing && currentTag) {
+          return prev.map(tag => tag.id === currentTag.id ? savedTag : tag);
+        } else {
+          return [...prev, savedTag];
+        }
+      });
+      
+      // Fechar diálogo
+      setIsDialogOpen(false);
+      
+      // Mostrar mensagem de sucesso
+      toast({
+        title: isEditing ? "Tag atualizada" : "Tag criada",
+        description: isEditing 
+          ? "A tag foi atualizada com sucesso." 
+          : "A tag foi criada com sucesso."
+      });
+    } catch (error) {
+      console.error("Erro ao salvar tag:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar a tag. Tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
     <Layout>
-      <div className="space-y-8">
-        <TagsHeader onAddTag={handleAddTag} />
+      <div className="space-y-6">
+        <TagsHeader onAddTag={handleAddClick} />
         
         <TagsList 
           tags={tags} 
-          onEdit={handleEditTag} 
-          onDelete={handleDeleteTag} 
-          onAddTag={handleAddTag}
+          onEdit={handleEditClick} 
+          onDelete={handleDeleteClick} 
+          onAddTag={handleAddClick}
         />
         
-        <Dialog open={isDialogOpen} onOpenChange={handleClose}>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>
-                {editingTag ? "Editar Tag" : "Nova Tag"}
-              </DialogTitle>
+              <DialogTitle>{isEditing ? "Editar Tag" : "Nova Tag"}</DialogTitle>
             </DialogHeader>
             
             <TagForm 
               tagName={tagName}
               setTagName={setTagName}
-              onSubmit={handleDialogSubmit}
-              onClose={handleClose}
-              isEditing={!!editingTag}
+              onSubmit={handleSubmit}
+              onClose={() => setIsDialogOpen(false)}
+              isEditing={isEditing}
               error={error}
             />
           </DialogContent>

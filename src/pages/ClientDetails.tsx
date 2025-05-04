@@ -1,185 +1,255 @@
 
 import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { Layout } from "../components/Layout";
-import { useNavigate, useParams } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { ClientDetails as ClientDetailsComponent } from "../components/ClientDetails";
 import { ClientForm } from "../components/ClientForm";
 import { Client, ServiceHistory, Task, Tag } from "../types";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft } from "lucide-react";
-import { getClients, saveClients, getTags } from "../services/localStorage";
+import { getClientWithRelations, getTags, saveClient, addServiceHistory, addTask, updateTaskCompletion, saveTag } from "../services/supabaseClient";
+import { Skeleton } from "@/components/ui/skeleton";
+import { generateId } from "../lib/utils";
 
-const ClientDetailsPage = () => {
+const ClientDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
   const [client, setClient] = useState<Client | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [tags, setTags] = useState<Tag[]>([]);
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Load client and tags from localStorage
   useEffect(() => {
-    // Get all clients from localStorage
-    const clients = getClients();
-    const loadedTags = getTags();
+    const fetchData = async () => {
+      try {
+        if (!id) return;
+        
+        setIsLoading(true);
+        
+        // Buscar o cliente
+        const clientData = await getClientWithRelations(id);
+        if (!clientData) {
+          throw new Error("Cliente não encontrado");
+        }
+        setClient(clientData);
+        
+        // Buscar tags disponíveis
+        const tagsData = await getTags();
+        setAvailableTags(tagsData);
+      } catch (error) {
+        console.error("Erro ao carregar dados do cliente:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os dados do cliente. Tente novamente.",
+          variant: "destructive"
+        });
+        navigate("/clients");
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    // Find client with the given ID
-    const foundClient = clients.find(c => c.id === id);
-    
-    if (foundClient) {
-      setClient(foundClient);
-      setTags(loadedTags);
-    } else {
-      navigate("/clients", { replace: true });
+    fetchData();
+  }, [id, navigate]);
+
+  // Função para atualizar cliente
+  const handleUpdateClient = async (updatedClient: Client) => {
+    try {
+      const savedClient = await saveClient(updatedClient);
+      if (!savedClient) {
+        throw new Error("Erro ao atualizar cliente");
+      }
+      
+      setClient(savedClient);
+      setIsEditing(false);
+      
       toast({
-        title: "Cliente não encontrado",
-        description: "O cliente solicitado não foi encontrado.",
+        title: "Cliente atualizado",
+        description: "As informações do cliente foram atualizadas com sucesso."
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar cliente:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o cliente. Tente novamente.",
         variant: "destructive"
       });
     }
-  }, [id, navigate]);
-  
-  const handleServiceHistoryAdd = (history: ServiceHistory) => {
-    if (!client) return;
-    
-    const updatedClient = {
-      ...client,
-      serviceHistory: [...client.serviceHistory, history],
-      updatedAt: new Date()
-    };
-    
-    // Update client in state
-    setClient(updatedClient);
-    
-    // Update client in localStorage
-    const clients = getClients();
-    const updatedClients = clients.map(c => 
-      c.id === client.id ? updatedClient : c
-    );
-    saveClients(updatedClients);
-    
-    toast({
-      title: "Atendimento registrado",
-      description: "O histórico de atendimento foi atualizado com sucesso."
-    });
   };
   
-  const handleTaskAdd = (task: Task) => {
-    if (!client) return;
-    
-    const updatedClient = {
-      ...client,
-      tasks: [...client.tasks, task],
-      updatedAt: new Date()
-    };
-    
-    // Update client in state
-    setClient(updatedClient);
-    
-    // Update client in localStorage
-    const clients = getClients();
-    const updatedClients = clients.map(c => 
-      c.id === client.id ? updatedClient : c
-    );
-    saveClients(updatedClients);
-    
-    toast({
-      title: "Tarefa adicionada",
-      description: "A nova tarefa foi adicionada com sucesso."
-    });
+  // Função para adicionar histórico de serviço
+  const handleAddServiceHistory = async (history: ServiceHistory) => {
+    try {
+      if (!client) return;
+      
+      // Adicionar ID e cliente ID ao histórico
+      const historyWithId: ServiceHistory = {
+        ...history,
+        id: history.id || generateId(),
+        clientId: client.id
+      };
+      
+      const savedHistory = await addServiceHistory(historyWithId);
+      if (!savedHistory) {
+        throw new Error("Erro ao adicionar histórico");
+      }
+      
+      // Atualizar o cliente local com o novo histórico
+      setClient({
+        ...client,
+        serviceHistory: [...client.serviceHistory, savedHistory]
+      });
+      
+      toast({
+        title: "Atendimento registrado",
+        description: "O registro de atendimento foi adicionado com sucesso."
+      });
+    } catch (error) {
+      console.error("Erro ao adicionar histórico de serviço:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível registrar o atendimento. Tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
   
-  const handleTaskComplete = (taskId: string, completed: boolean) => {
-    if (!client) return;
-    
-    const updatedTasks = client.tasks.map(task => 
-      task.id === taskId ? { ...task, completed } : task
-    );
-    
-    const updatedClient = {
-      ...client,
-      tasks: updatedTasks,
-      updatedAt: new Date()
-    };
-    
-    // Update client in state
-    setClient(updatedClient);
-    
-    // Update client in localStorage
-    const clients = getClients();
-    const updatedClients = clients.map(c => 
-      c.id === client.id ? updatedClient : c
-    );
-    saveClients(updatedClients);
-    
-    toast({
-      title: completed ? "Tarefa concluída" : "Tarefa reaberta",
-      description: completed 
-        ? "A tarefa foi marcada como concluída." 
-        : "A tarefa foi marcada como pendente."
-    });
+  // Função para adicionar tarefa
+  const handleAddTask = async (task: Task) => {
+    try {
+      if (!client) return;
+      
+      // Adicionar ID e cliente ID à tarefa
+      const taskWithId: Task = {
+        ...task,
+        id: task.id || generateId(),
+        clientId: client.id
+      };
+      
+      const savedTask = await addTask(taskWithId);
+      if (!savedTask) {
+        throw new Error("Erro ao adicionar tarefa");
+      }
+      
+      // Atualizar o cliente local com a nova tarefa
+      setClient({
+        ...client,
+        tasks: [...client.tasks, savedTask]
+      });
+      
+      toast({
+        title: "Tarefa adicionada",
+        description: "A tarefa foi adicionada com sucesso."
+      });
+    } catch (error) {
+      console.error("Erro ao adicionar tarefa:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível adicionar a tarefa. Tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
   
-  const handleClientUpdate = (updatedClient: Client) => {
-    // Update client in state
-    setClient(updatedClient);
-    
-    // Update client in localStorage
-    const clients = getClients();
-    const updatedClients = clients.map(c => 
-      c.id === updatedClient.id ? updatedClient : c
-    );
-    saveClients(updatedClients);
-    
-    setIsEditing(false);
-    
-    toast({
-      title: "Cliente atualizado",
-      description: "As informações do cliente foram atualizadas com sucesso."
-    });
+  // Função para marcar tarefa como concluída/não concluída
+  const handleTaskComplete = async (taskId: string, completed: boolean) => {
+    try {
+      if (!client) return;
+      
+      const success = await updateTaskCompletion(taskId, completed);
+      if (!success) {
+        throw new Error("Erro ao atualizar status da tarefa");
+      }
+      
+      // Atualizar o cliente local com o novo status da tarefa
+      setClient({
+        ...client,
+        tasks: client.tasks.map(task => 
+          task.id === taskId ? { ...task, completed } : task
+        )
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar status da tarefa:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o status da tarefa. Tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
   
-  const handleTagCreate = (newTag: Tag) => {
-    setTags(prevTags => [...prevTags, newTag]);
+  // Função para criar nova tag
+  const handleCreateTag = async (tag: Tag) => {
+    try {
+      const savedTag = await saveTag(tag);
+      if (!savedTag) {
+        throw new Error("Erro ao criar tag");
+      }
+      
+      // Atualizar lista local de tags
+      setAvailableTags(prev => [...prev, savedTag]);
+      
+      toast({
+        title: "Tag criada",
+        description: `A tag "${tag.name}" foi criada com sucesso.`
+      });
+      
+      return savedTag;
+    } catch (error) {
+      console.error("Erro ao criar tag:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar a tag. Tente novamente.",
+        variant: "destructive"
+      });
+      return null;
+    }
   };
-  
-  if (!client) {
+
+  if (isLoading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-96">
-          <p className="text-muted-foreground">Carregando informações do cliente...</p>
+        <div className="space-y-6">
+          <Skeleton className="h-8 w-1/3" />
+          <Skeleton className="h-20 w-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-1/4" />
+            <Skeleton className="h-10 w-full" />
+          </div>
         </div>
       </Layout>
     );
   }
-  
+
+  if (!client) {
+    return (
+      <Layout>
+        <div className="text-center py-10">
+          <p className="text-muted-foreground">Cliente não encontrado</p>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
-      <div className="space-y-6">
-        <div>
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate("/clients")}
-            className="flex items-center gap-1 mb-4"
-          >
-            <ArrowLeft size={16} />
-            Voltar para a lista de clientes
-          </Button>
-        </div>
-        
-        {isEditing ? (
-          <>
-            <h1 className="text-2xl font-semibold">Editar Cliente</h1>
-            
+      {isEditing ? (
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold">Editar Cliente</h1>
+            <p className="text-muted-foreground">
+              Atualize as informações do cliente conforme necessário.
+            </p>
+          </div>
+          
+          <div className="bg-white p-6 rounded-lg border">
             <ClientForm 
               client={client}
-              availableTags={tags}
-              onSubmit={handleClientUpdate}
-              onCreateTag={handleTagCreate}
+              availableTags={availableTags}
+              onSubmit={handleUpdateClient}
+              onCreateTag={handleCreateTag}
             />
             
-            <div className="flex justify-end">
+            <div className="mt-4 flex justify-end">
               <Button 
                 variant="outline" 
                 onClick={() => setIsEditing(false)}
@@ -187,20 +257,20 @@ const ClientDetailsPage = () => {
                 Cancelar
               </Button>
             </div>
-          </>
-        ) : (
-          <ClientDetailsComponent 
-            client={client}
-            availableTags={tags}
-            onServiceHistoryAdd={handleServiceHistoryAdd}
-            onTaskAdd={handleTaskAdd}
-            onTaskComplete={handleTaskComplete}
-            onEditClick={() => setIsEditing(true)}
-          />
-        )}
-      </div>
+          </div>
+        </div>
+      ) : (
+        <ClientDetailsComponent 
+          client={client}
+          availableTags={availableTags}
+          onServiceHistoryAdd={handleAddServiceHistory}
+          onTaskAdd={handleAddTask}
+          onTaskComplete={handleTaskComplete}
+          onEditClick={() => setIsEditing(true)}
+        />
+      )}
     </Layout>
   );
 };
 
-export default ClientDetailsPage;
+export default ClientDetails;
