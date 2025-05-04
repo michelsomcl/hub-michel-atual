@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Layout } from "../components/Layout";
 import { ClientForm } from "../components/ClientForm";
@@ -7,6 +7,7 @@ import { Client, Tag } from "../types";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "../integrations/supabase/client";
 import { useTags } from "../hooks/useTags";
+import { generateId } from "../lib/utils";
 
 const NewClient = () => {
   const navigate = useNavigate();
@@ -16,25 +17,37 @@ const NewClient = () => {
   const handleSubmit = async (client: Client) => {
     setIsLoading(true);
     try {
+      // Ensure client has a valid UUID
+      const clientId = client.id;
+      
+      console.log("Creating client with ID:", clientId);
+      console.log("Client data:", client);
+
       // Insert client into Supabase
-      const { error: clientError } = await supabase
+      const { data, error: clientError } = await supabase
         .from("clients")
         .insert({
-          id: client.id,
+          id: clientId,
           name: client.name,
           phone: client.phone,
           source: client.source,
           level: client.level,
           created_at: client.createdAt.toISOString(),
           updated_at: client.updatedAt.toISOString(),
-        });
+        })
+        .select();
 
-      if (clientError) throw clientError;
+      if (clientError) {
+        console.error("Error inserting client:", clientError);
+        throw clientError;
+      }
+
+      console.log("Client created:", data);
 
       // Handle tags if present
       if (client.tags.length > 0) {
         const client_tags = client.tags.map(tag => ({
-          client_id: client.id,
+          client_id: clientId,
           tag_id: tag.id
         }));
 
@@ -42,7 +55,10 @@ const NewClient = () => {
           .from("client_tags")
           .insert(client_tags);
 
-        if (tagsError) throw tagsError;
+        if (tagsError) {
+          console.error("Error inserting client tags:", tagsError);
+          throw tagsError;
+        }
       }
       
       toast({

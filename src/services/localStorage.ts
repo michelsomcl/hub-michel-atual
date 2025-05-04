@@ -1,6 +1,7 @@
 
 import { Client, Tag } from "../types";
 import { supabase } from "@/integrations/supabase/client";
+import { generateId } from "../lib/utils";
 
 const convertSupabaseClient = (item: any): Client => {
   // Transform from Supabase format to our app format
@@ -41,6 +42,13 @@ export const saveClients = async (clients: Client[]): Promise<void> => {
 export const saveClient = async (client: Client): Promise<void> => {
   const clientData = convertClientToSupabase(client);
   
+  // Ensure client has a valid UUID
+  if (!clientData.id || clientData.id.length < 36) {
+    clientData.id = generateId();
+  }
+  
+  console.log("Saving client with ID:", clientData.id);
+  
   // Upsert the client
   const { error: clientError } = await supabase
     .from('clients')
@@ -54,10 +62,13 @@ export const saveClient = async (client: Client): Promise<void> => {
 
   // Handle service history
   for (const history of client.serviceHistory) {
+    // Ensure history has a valid UUID
+    const historyId = history.id || generateId();
+    
     const { error: historyError } = await supabase
       .from('service_history')
       .upsert({
-        id: history.id,
+        id: historyId,
         client_id: client.id,
         date: history.date.toISOString(),
         observations: history.observations,
@@ -71,10 +82,13 @@ export const saveClient = async (client: Client): Promise<void> => {
   
   // Handle tasks
   for (const task of client.tasks) {
+    // Ensure task has a valid UUID
+    const taskId = task.id || generateId();
+    
     const { error: taskError } = await supabase
       .from('tasks')
       .upsert({
-        id: task.id,
+        id: taskId,
         client_id: client.id,
         description: task.description,
         completed: task.completed,
@@ -221,11 +235,16 @@ export const getClients = async (): Promise<Client[]> => {
 
 export const saveTags = async (tags: Tag[]): Promise<void> => {
   // Convert tags to Supabase format and upsert them
-  const supabaseTags = tags.map(tag => ({
-    id: tag.id,
-    name: tag.name,
-    created_at: tag.createdAt.toISOString()
-  }));
+  const supabaseTags = tags.map(tag => {
+    // Ensure tag has a valid UUID
+    const tagId = tag.id || generateId();
+    
+    return {
+      id: tagId,
+      name: tag.name,
+      created_at: tag.createdAt.toISOString()
+    };
+  });
   
   const { error } = await supabase
     .from('tags')
@@ -281,12 +300,23 @@ export const initializeLocalStorage = async (): Promise<void> => {
     // Import mock data to initialize
     const { mockClients, mockTags } = await import('../data/mockData');
     
+    // Ensure all mock data has valid UUIDs
+    const validMockClients = mockClients.map(client => ({
+      ...client,
+      id: generateId()
+    }));
+    
+    const validMockTags = mockTags.map(tag => ({
+      ...tag,
+      id: generateId()
+    }));
+    
     if (clients.length === 0) {
-      await saveClients(mockClients);
+      await saveClients(validMockClients);
     }
     
     if (tags.length === 0) {
-      await saveTags(mockTags);
+      await saveTags(validMockTags);
     }
   }
 };
