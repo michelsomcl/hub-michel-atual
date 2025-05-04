@@ -1,6 +1,5 @@
 
-// Este arquivo agora apenas reexporta tudo dos arquivos de serviço individuais
-// para manter compatibilidade com código existente
+// Arquivo de barrel para exportar todos os serviços
 export * from './baseService';
 export * from './clientService';
 export * from './tagService';

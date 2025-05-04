@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Layout } from "../components/Layout";
@@ -9,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { getClientWithRelations, getTags, saveClient, addServiceHistory, addTask, updateTaskCompletion, saveTag } from "../services/supabaseClient";
 import { Skeleton } from "@/components/ui/skeleton";
 import { generateId } from "../lib/utils";
+import { Button } from "@/components/ui/button";
 
 const ClientDetails = () => {
   const { id } = useParams<{ id: string }>();

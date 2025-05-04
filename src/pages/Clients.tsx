@@ -73,7 +73,7 @@ const Clients = () => {
           onSearch={handleSearch}
           onTagChange={handleTagChange}
           onLevelChange={handleLevelChange}
-          onClearFilters={clearFilters}
+          clearFilters={clearFilters} // Corrigido de onClearFilters para clearFilters
           isLoading={isLoading}
         />
         
