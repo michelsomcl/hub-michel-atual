@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from "react";
-import { Layout } from "@/components/layout/Layout";
+import { Layout } from "../components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,8 @@ import { Link } from "react-router-dom";
 import { Task, Client, ClientLevel } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { CalendarIcon, CheckIcon } from "@radix-ui/react-icons";
+import { CalendarIcon } from "lucide-react";
+import { CheckIcon } from "lucide-react";
 
 interface TaskWithClient extends Task {
   client: Client;
@@ -32,7 +34,7 @@ const Tasks = () => {
         .from("tasks")
         .select("*, clients(*)")
         .eq("completed", false)
-        .order("due_date", { ascending: true, nullsLast: true });
+        .order("due_date", { ascending: true });
 
       if (tasksError) throw tasksError;
 
