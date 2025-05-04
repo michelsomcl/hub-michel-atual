@@ -14,41 +14,29 @@ import { getClients, saveClients } from "../services/localStorage";
 
 interface ClientListProps {
   clients: Client[];
-  onClientDeleted?: () => void;
 }
 
-export const ClientList = ({ clients, onClientDeleted }: ClientListProps) => {
+export const ClientList = ({ clients }: ClientListProps) => {
   const navigate = useNavigate();
 
-  const handleDeleteClient = async (clientId: string, event: React.MouseEvent) => {
+  const handleDeleteClient = (clientId: string, event: React.MouseEvent) => {
     event.stopPropagation();
     
-    try {
-      // Get current clients and filter out the one to delete
-      const currentClients = await getClients();
-      const updatedClients = currentClients.filter(client => client.id !== clientId);
-      
-      // Save updated clients list to Supabase
-      await saveClients(updatedClients);
-      
-      // Show confirmation toast
-      toast({
-        title: "Cliente excluído",
-        description: "O cliente foi excluído com sucesso."
-      });
-      
-      // Notify parent component about the deletion
-      if (onClientDeleted) {
-        onClientDeleted();
-      }
-    } catch (error) {
-      console.error("Erro ao excluir cliente:", error);
-      toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao excluir o cliente.",
-        variant: "destructive"
-      });
-    }
+    // Get current clients and filter out the one to delete
+    const currentClients = getClients();
+    const updatedClients = currentClients.filter(client => client.id !== clientId);
+    
+    // Save updated clients list to localStorage
+    saveClients(updatedClients);
+    
+    // Show confirmation toast
+    toast({
+      title: "Cliente excluído",
+      description: "O cliente foi excluído com sucesso."
+    });
+    
+    // Force a page reload to refresh the client list
+    window.location.reload();
   };
 
   // Sort clients alphabetically by name

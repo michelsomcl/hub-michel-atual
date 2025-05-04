@@ -13,7 +13,6 @@ interface TagFormProps {
   onClose: () => void;
   isEditing: boolean;
   error?: string;
-  isLoading?: boolean;
 }
 
 export const TagForm = ({ 
@@ -22,8 +21,7 @@ export const TagForm = ({
   onSubmit, 
   onClose, 
   isEditing,
-  error,
-  isLoading = false
+  error
 }: TagFormProps) => {
   return (
     <form onSubmit={onSubmit} className="space-y-4 py-4">
@@ -48,14 +46,8 @@ export const TagForm = ({
         <Button type="button" variant="outline" onClick={onClose}>
           Cancelar
         </Button>
-        <Button 
-          type="submit" 
-          className="btn-primary"
-          disabled={isLoading}
-        >
-          {isLoading 
-            ? "Processando..." 
-            : isEditing ? "Atualizar" : "Salvar"}
+        <Button type="submit" className="btn-primary">
+          {isEditing ? "Atualizar" : "Salvar"}
         </Button>
       </DialogFooter>
     </form>

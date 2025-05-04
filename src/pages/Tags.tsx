@@ -21,31 +21,13 @@ const Tags = () => {
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
   const [tagName, setTagName] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   
-  // Carregar tags do Supabase quando o componente montar
+  // Carregar tags do localStorage quando o componente montar
   useEffect(() => {
-    const loadTags = async () => {
-      setLoading(true);
-      try {
-        const storedTags = await getTags();
-        // Sort tags alphabetically
-        const sortedTags = [...storedTags].sort((a, b) => a.name.localeCompare(b.name));
-        setTags(sortedTags);
-      } catch (error) {
-        console.error("Erro ao carregar tags:", error);
-        toast({
-          title: "Erro",
-          description: "Erro ao carregar as tags.",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadTags();
+    const storedTags = getTags();
+    // Sort tags alphabetically
+    const sortedTags = [...storedTags].sort((a, b) => a.name.localeCompare(b.name));
+    setTags(sortedTags);
   }, []);
 
   const handleAddTag = () => {
@@ -62,30 +44,18 @@ const Tags = () => {
     setIsDialogOpen(true);
   };
   
-  const handleDeleteTag = async (tagId: string) => {
-    setSaving(true);
-    try {
-      const updatedTags = tags.filter(tag => tag.id !== tagId);
-      setTags(updatedTags);
-      await saveTags(updatedTags);
-      
-      toast({
-        title: "Tag excluída",
-        description: "A tag foi removida com sucesso."
-      });
-    } catch (error) {
-      console.error("Erro ao excluir tag:", error);
-      toast({
-        title: "Erro",
-        description: "Erro ao excluir a tag.",
-        variant: "destructive"
-      });
-    } finally {
-      setSaving(false);
-    }
+  const handleDeleteTag = (tagId: string) => {
+    const updatedTags = tags.filter(tag => tag.id !== tagId);
+    setTags(updatedTags);
+    saveTags(updatedTags);
+    
+    toast({
+      title: "Tag excluída",
+      description: "A tag foi removida com sucesso."
+    });
   };
   
-  const handleDialogSubmit = async (e: React.FormEvent) => {
+  const handleDialogSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!tagName.trim()) return;
@@ -157,23 +127,11 @@ const Tags = () => {
     // Sort tags alphabetically
     const sortedTags = updatedTags.sort((a, b) => a.name.localeCompare(b.name));
     
-    setSaving(true);
-    try {
-      // Atualizar estado e salvar no Supabase
-      setTags(sortedTags);
-      await saveTags(sortedTags);
-      setIsDialogOpen(false);
-      setError("");
-    } catch (error) {
-      console.error("Erro ao salvar tags:", error);
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar as alterações.",
-        variant: "destructive"
-      });
-    } finally {
-      setSaving(false);
-    }
+    // Atualizar estado e salvar no localStorage
+    setTags(sortedTags);
+    saveTags(sortedTags);
+    setIsDialogOpen(false);
+    setError("");
   };
   
   const handleClose = () => {
@@ -187,18 +145,12 @@ const Tags = () => {
       <div className="space-y-8">
         <TagsHeader onAddTag={handleAddTag} />
         
-        {loading ? (
-          <div className="flex justify-center py-10">
-            <p className="text-muted-foreground">Carregando tags...</p>
-          </div>
-        ) : (
-          <TagsList 
-            tags={tags} 
-            onEdit={handleEditTag} 
-            onDelete={handleDeleteTag} 
-            onAddTag={handleAddTag}
-          />
-        )}
+        <TagsList 
+          tags={tags} 
+          onEdit={handleEditTag} 
+          onDelete={handleDeleteTag} 
+          onAddTag={handleAddTag}
+        />
         
         <Dialog open={isDialogOpen} onOpenChange={handleClose}>
           <DialogContent>
@@ -215,7 +167,6 @@ const Tags = () => {
               onClose={handleClose}
               isEditing={!!editingTag}
               error={error}
-              isLoading={saving}
             />
           </DialogContent>
         </Dialog>

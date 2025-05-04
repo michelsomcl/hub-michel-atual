@@ -19,46 +19,34 @@ const Index = () => {
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [filterTitle, setFilterTitle] = useState<string>("");
-  const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        await initializeLocalStorage();
-        
-        const clients = await getClients();
-        setAllClients(clients);
-        
-        setTotalClients(clients.length);
-        
-        setTotalLeads(clients.filter(client => client.level === "Lead").length);
-        
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        setClientsToday(clients.filter(client => {
-          const clientDate = new Date(client.createdAt);
-          clientDate.setHours(0, 0, 0, 0);
-          return clientDate.getTime() === today.getTime();
-        }).length);
-        
-        const totalPendingTasks = clients.reduce((total, client) => {
-          return total + client.tasks.filter(task => !task.completed).length;
-        }, 0);
-        setPendingTasks(totalPendingTasks);
-        
-        const sortedClients = [...clients].sort((a, b) => 
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-        setRecentClients(sortedClients.slice(0, 5));
-      } catch (error) {
-        console.error("Erro ao carregar dados:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    initializeLocalStorage();
     
-    loadData();
+    const clients = getClients();
+    setAllClients(clients);
+    
+    setTotalClients(clients.length);
+    
+    setTotalLeads(clients.filter(client => client.level === "Lead").length);
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    setClientsToday(clients.filter(client => {
+      const clientDate = new Date(client.createdAt);
+      clientDate.setHours(0, 0, 0, 0);
+      return clientDate.getTime() === today.getTime();
+    }).length);
+    
+    const totalPendingTasks = clients.reduce((total, client) => {
+      return total + client.tasks.filter(task => !task.completed).length;
+    }, 0);
+    setPendingTasks(totalPendingTasks);
+    
+    const sortedClients = [...clients].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    setRecentClients(sortedClients.slice(0, 5));
   }, []);
   
   const handleCardClick = (filterKey: string, title: string) => {
@@ -111,34 +99,26 @@ const Index = () => {
       <div className="space-y-8">
         <DashboardHeader />
         
-        {loading ? (
-          <div className="flex justify-center py-10">
-            <p className="text-muted-foreground">Carregando dashboard...</p>
-          </div>
-        ) : (
-          <>
-            <SummaryCards 
-              totalClients={totalClients}
-              totalLeads={totalLeads}
-              clientsToday={clientsToday}
-              pendingTasks={pendingTasks}
-              activeFilter={activeFilter}
-              onCardClick={handleCardClick}
-            />
+        <SummaryCards 
+          totalClients={totalClients}
+          totalLeads={totalLeads}
+          clientsToday={clientsToday}
+          pendingTasks={pendingTasks}
+          activeFilter={activeFilter}
+          onCardClick={handleCardClick}
+        />
 
-            <FilteredClientsList 
-              activeFilter={activeFilter}
-              filteredClients={filteredClients}
-              filterTitle={filterTitle}
-              onClearFilter={clearFilter}
-            />
-            
-            <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
-              <RecentClientsCard recentClients={recentClients} />
-              <MiniCalendarCard />
-            </div>
-          </>
-        )}
+        <FilteredClientsList 
+          activeFilter={activeFilter}
+          filteredClients={filteredClients}
+          filterTitle={filterTitle}
+          onClearFilter={clearFilter}
+        />
+        
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+          <RecentClientsCard recentClients={recentClients} />
+          <MiniCalendarCard />
+        </div>
       </div>
     </Layout>
   );

@@ -10,10 +10,9 @@ import { generateId } from "../lib/utils";
 interface ServiceHistoryFormProps {
   clientId: string;
   onSubmit: (history: ServiceHistory) => void;
-  disabled?: boolean;
 }
 
-export const ServiceHistoryForm = ({ clientId, onSubmit, disabled = false }: ServiceHistoryFormProps) => {
+export const ServiceHistoryForm = ({ clientId, onSubmit }: ServiceHistoryFormProps) => {
   const [date, setDate] = React.useState<string>(
     new Date().toISOString().split("T")[0]
   );
@@ -46,7 +45,6 @@ export const ServiceHistoryForm = ({ clientId, onSubmit, disabled = false }: Ser
           value={date}
           onChange={(e) => setDate(e.target.value)}
           required
-          disabled={disabled}
         />
       </div>
       
@@ -59,11 +57,10 @@ export const ServiceHistoryForm = ({ clientId, onSubmit, disabled = false }: Ser
           placeholder="Detalhes do atendimento..."
           rows={4}
           required
-          disabled={disabled}
         />
       </div>
       
-      <Button type="submit" className="btn-primary" disabled={disabled}>
+      <Button type="submit" className="btn-primary">
         Registrar Atendimento
       </Button>
     </form>

@@ -1,160 +1,219 @@
 
-import React, { useState, useEffect } from 'react';
-import { Calendar as ShadCalendar } from "@/components/ui/calendar"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from '../integrations/supabase/client';
-import { ClientLevel } from '../types';
+import React, { useState, useEffect } from "react";
 import { Layout } from "../components/Layout";
-import { CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Task, Client } from "../types";
+import { getClients } from "../services/localStorage";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-interface Client {
-  id: string;
-  name: string;
-  phone: string;
-  source: string;
-  level: string;
-  created_at: string;
-  updated_at: string;
-}
+type CalendarView = "day" | "week" | "month";
 
-const Calendar = () => {
-  const [date, setDate] = useState<Date | undefined>(new Date());
+const CalendarPage = () => {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [view, setView] = useState<CalendarView>("month");
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
-  const [search, setSearch] = useState<string>('');
+  const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
+  const [taskDates, setTaskDates] = useState<Date[]>([]);
 
-  const { data: clientsData, error, isLoading } = useQuery({
-    queryKey: ['clients'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching clients:', error);
-        throw error;
-      }
-
-      return data;
-    },
-  });
-
+  // Load all clients and their tasks from localStorage
   useEffect(() => {
-    if (clientsData) {
-      setClients(clientsData);
+    const loadedClients = getClients();
+    setClients(loadedClients);
+
+    // Extract all tasks from all clients
+    const allTasks: Task[] = [];
+    const allTaskDates: Date[] = [];
+    
+    loadedClients.forEach(client => {
+      client.tasks.forEach(task => {
+        const enhancedTask = {
+          ...task,
+          clientName: client.name
+        } as Task & { clientName: string };
+        
+        allTasks.push(enhancedTask);
+        
+        // Add task date to taskDates array for marking in calendar
+        if (task.dueDate) {
+          allTaskDates.push(new Date(task.dueDate));
+        }
+      });
+    });
+
+    setTasks(allTasks);
+    setTaskDates(allTaskDates);
+  }, []);
+
+  // Filter tasks based on selected date and view
+  useEffect(() => {
+    let filtered = [...tasks];
+
+    if (view === "day") {
+      filtered = filtered.filter(task => {
+        if (!task.dueDate) return false;
+        return new Date(task.dueDate).toDateString() === selectedDate.toDateString();
+      });
+    } else if (view === "week") {
+      const weekStart = new Date(selectedDate);
+      weekStart.setDate(selectedDate.getDate() - selectedDate.getDay());
+      
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+
+      filtered = filtered.filter(task => {
+        if (!task.dueDate) return false;
+        const taskDate = new Date(task.dueDate);
+        return taskDate >= weekStart && taskDate <= weekEnd;
+      });
+    } else if (view === "month") {
+      filtered = filtered.filter(task => {
+        if (!task.dueDate) return false;
+        const taskDate = new Date(task.dueDate);
+        return (
+          taskDate.getMonth() === selectedDate.getMonth() &&
+          taskDate.getFullYear() === selectedDate.getFullYear()
+        );
+      });
     }
-  }, [clientsData]);
 
-  if (isLoading) {
-    return (
-      <Layout>
-        <div>Carregando...</div>
-      </Layout>
+    setFilteredTasks(filtered);
+  }, [tasks, selectedDate, view]);
+
+  // Get the client name for a specific client ID
+  const getClientName = (clientId: string): string => {
+    const client = clients.find(c => c.id === clientId);
+    return client ? client.name : "Cliente não encontrado";
+  };
+
+  // Function to check if a date has tasks
+  const hasTasksOnDate = (date: Date): boolean => {
+    return taskDates.some(taskDate => 
+      taskDate.getDate() === date.getDate() && 
+      taskDate.getMonth() === date.getMonth() && 
+      taskDate.getFullYear() === date.getFullYear()
     );
-  }
+  };
 
-  if (error) {
+  // Render different views based on the selected view type
+  const renderTasksList = () => {
+    if (filteredTasks.length === 0) {
+      return (
+        <div className="text-center py-10">
+          <p className="text-muted-foreground">Nenhuma tarefa encontrada para este período</p>
+        </div>
+      );
+    }
+
     return (
-      <Layout>
-        <div>Erro ao carregar os dados.</div>
-      </Layout>
+      <div className="space-y-4">
+        {filteredTasks.map(task => (
+          <Card key={task.id} className="border-l-4 border-l-primary">
+            <CardContent className="p-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-medium">{task.description}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Cliente: {(task as any).clientName || getClientName(task.clientId)}
+                  </p>
+                </div>
+                <Badge variant={task.completed ? "default" : "outline"}>
+                  {task.completed ? "Concluída" : "Pendente"}
+                </Badge>
+              </div>
+              {task.dueDate && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Data: {format(new Date(task.dueDate), "dd/MM/yyyy")}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     );
-  }
+  };
 
-  const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(search.toLowerCase())
-  );
+  // Custom modifiers for the calendar to mark dates with tasks
+  const modifiers = {
+    hasTasks: taskDates.map(date => new Date(date))
+  };
+
+  // Custom styles for days with tasks
+  const modifiersStyles = {
+    hasTasks: {
+      color: "white",
+      backgroundColor: "#1e40af"
+    }
+  };
 
   return (
     <Layout>
-      <div className="container mx-auto py-10">
-        <Card>
-          <CardHeader>
-            <CardTitle>Calendário</CardTitle>
-            <CardDescription>
-              Selecione um dia para ver os clientes.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="flex items-center justify-between p-4">
-              <Label htmlFor="search">Buscar Cliente:</Label>
-              <Input
-                type="search"
-                id="search"
-                placeholder="Digite o nome do cliente..."
-                className="max-w-sm"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-[280px] justify-start text-left font-normal",
-                      !date && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, "PPP", { locale: ptBR }) : <span>Escolha uma data</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="center" side="bottom">
-                  <ShadCalendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
-                    disabled={(date) =>
-                      date > new Date() || date < new Date("2023-01-01")
-                    }
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div>
-              <ul>
-                {filteredClients.map((client) => {
-                  const clientData = {
-                    id: client.id,
-                    name: client.name,
-                    phone: client.phone,
-                    source: client.source,
-                    level: client.level as ClientLevel, // Ensure proper type casting
-                    serviceHistory: [],
-                    tasks: [],
-                    tags: [],
-                    createdAt: new Date(client.created_at),
-                    updatedAt: new Date(client.updated_at)
-                  };
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Calendário</h1>
+          <p className="text-muted-foreground">
+            Visualize e gerencie todas as tarefas
+          </p>
+        </div>
 
-                  return (
-                    <li key={client.id}>
-                      {client.name} - {client.phone} - {client.level}
-                    </li>
-                  );
-                })}
-              </ul>
+        <div className="bg-white p-6 rounded-lg border">
+          <Tabs defaultValue="month" value={view} onValueChange={(value) => setView(value as CalendarView)}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold">
+                {format(selectedDate, "MMMM yyyy")}
+              </h2>
+              <TabsList>
+                <TabsTrigger value="day">Dia</TabsTrigger>
+                <TabsTrigger value="week">Semana</TabsTrigger>
+                <TabsTrigger value="month">Mês</TabsTrigger>
+              </TabsList>
             </div>
-          </CardContent>
-        </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-6">
+              <Card>
+                <CardContent className="p-0 pt-6">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    className="border-0"
+                    modifiers={{
+                      hasTasks: (date) => hasTasksOnDate(date)
+                    }}
+                    modifiersStyles={{
+                      hasTasks: { 
+                        backgroundColor: "#1e40af", 
+                        color: "white",
+                        fontWeight: "bold"
+                      }
+                    }}
+                  />
+                </CardContent>
+              </Card>
+
+              <div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>
+                      {view === "day" && format(selectedDate, "dd 'de' MMMM 'de' yyyy")}
+                      {view === "week" && `Semana de ${format(selectedDate, "dd/MM/yyyy")}`}
+                      {view === "month" && format(selectedDate, "MMMM 'de' yyyy")}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {renderTasksList()}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </Tabs>
+        </div>
       </div>
     </Layout>
   );
 };
 
-export default Calendar;
+export default CalendarPage;

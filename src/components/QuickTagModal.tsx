@@ -9,7 +9,7 @@ import {
 import { Tag } from "../types";
 import { generateId } from "../lib/utils";
 import { TagForm } from "./TagForm";
-import { getTags, saveTags } from "../services/localStorage";
+import { saveTags, getTags } from "../services/localStorage";
 import { toast } from "@/hooks/use-toast";
 
 interface QuickTagModalProps {
@@ -21,64 +21,46 @@ interface QuickTagModalProps {
 export const QuickTagModal = ({ isOpen, onClose, onCreateTag }: QuickTagModalProps) => {
   const [tagName, setTagName] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!tagName.trim()) return;
     
     const trimmedName = tagName.trim();
     
-    setLoading(true);
-    try {
-      // Check if tag already exists
-      const currentTags = await getTags();
-      const tagExists = currentTags.some(tag => 
-        tag.name.toLowerCase() === trimmedName.toLowerCase()
-      );
-      
-      if (tagExists) {
-        setError("Tag já cadastrada");
-        toast({
-          title: "Erro",
-          description: "Tag já cadastrada",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      const newTag: Tag = {
-        id: generateId(),
-        name: trimmedName,
-        createdAt: new Date()
-      };
-      
-      // Get current tags, add the new one, and sort alphabetically
-      const updatedTags = [...currentTags, newTag]
-        .sort((a, b) => a.name.localeCompare(b.name));
-      
-      // Atualizar Supabase
-      await saveTags(updatedTags);
-      
-      onCreateTag(newTag);
-      resetForm();
-      onClose();
-      
-      toast({
-        title: "Tag criada",
-        description: `A tag "${newTag.name}" foi criada com sucesso.`
-      });
-    } catch (error) {
-      console.error("Erro ao criar tag:", error);
+    // Check if tag already exists
+    const currentTags = getTags();
+    const tagExists = currentTags.some(tag => 
+      tag.name.toLowerCase() === trimmedName.toLowerCase()
+    );
+    
+    if (tagExists) {
+      setError("Tag já cadastrada");
       toast({
         title: "Erro",
-        description: "Ocorreu um erro ao criar a tag.",
+        description: "Tag já cadastrada",
         variant: "destructive"
       });
-    } finally {
-      setLoading(false);
+      return;
     }
+    
+    const newTag: Tag = {
+      id: generateId(),
+      name: trimmedName,
+      createdAt: new Date()
+    };
+    
+    // Get current tags, add the new one, and sort alphabetically
+    const updatedTags = [...currentTags, newTag]
+      .sort((a, b) => a.name.localeCompare(b.name));
+    
+    // Atualizar localStorage
+    saveTags(updatedTags);
+    
+    onCreateTag(newTag);
+    resetForm();
+    onClose();
   };
   
   const resetForm = () => {
@@ -105,7 +87,6 @@ export const QuickTagModal = ({ isOpen, onClose, onCreateTag }: QuickTagModalPro
           onClose={handleClose}
           isEditing={false}
           error={error}
-          isLoading={loading}
         />
       </DialogContent>
     </Dialog>

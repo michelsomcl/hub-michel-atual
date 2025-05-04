@@ -21,16 +21,9 @@ interface ClientFormProps {
   availableTags: Tag[];
   onSubmit: (client: Client) => void;
   onCreateTag: (tag: Tag) => void;
-  isLoading?: boolean;
 }
 
-export const ClientForm = ({ 
-  client, 
-  availableTags, 
-  onSubmit, 
-  onCreateTag,
-  isLoading = false 
-}: ClientFormProps) => {
+export const ClientForm = ({ client, availableTags, onSubmit, onCreateTag }: ClientFormProps) => {
   const { toast } = useToast();
   const [name, setName] = useState(client?.name || "");
   const [phone, setPhone] = useState(client?.phone || "");
@@ -72,11 +65,35 @@ export const ClientForm = ({
     };
     
     onSubmit(updatedClient);
+    
+    if (!client) {
+      // Reset form if it's a new client
+      setName("");
+      setPhone("");
+      setSource("");
+      setLevel("Lead");
+      setSelectedTags([]);
+      
+      toast({
+        title: "Cliente adicionado",
+        description: "O cliente foi cadastrado com sucesso."
+      });
+    } else {
+      toast({
+        title: "Cliente atualizado",
+        description: "As informações do cliente foram atualizadas."
+      });
+    }
   };
   
   const handleCreateTag = (tag: Tag) => {
     onCreateTag(tag);
     setSelectedTags(prev => [...prev, tag]);
+    
+    toast({
+      title: "Tag criada",
+      description: `A tag "${tag.name}" foi criada com sucesso.`
+    });
   };
   
   const handleTagsChange = (tags: Tag[]) => {
@@ -145,12 +162,8 @@ export const ClientForm = ({
         </div>
         
         <div className="flex justify-end gap-3">
-          <Button 
-            type="submit" 
-            className="btn-primary" 
-            disabled={isLoading}
-          >
-            {isLoading ? "Processando..." : client ? "Atualizar" : "Cadastrar"} Cliente
+          <Button type="submit" className="btn-primary">
+            {client ? "Atualizar" : "Cadastrar"} Cliente
           </Button>
         </div>
       </form>

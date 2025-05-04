@@ -7,31 +7,16 @@ import { ClientsHeader } from "../components/ClientsHeader";
 import { ClientFilters } from "../components/ClientFilters";
 import { useClientFilters } from "../hooks/useClientFilters";
 import { getClients, getTags } from "../services/localStorage";
-import { Client } from "../types";
 
 const Clients = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [clients, setClients] = useState<Client[]>([]);
-  const [tags, setTags] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [clients, setClients] = useState(getClients());
+  const [tags, setTags] = useState(getTags());
   
-  // Load clients and tags from Supabase when component mounts
+  // Refresh tags from localStorage when component mounts
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const loadedClients = await getClients();
-        const loadedTags = await getTags();
-        setClients(loadedClients);
-        setTags(loadedTags);
-      } catch (error) {
-        console.error("Erro ao carregar dados:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadData();
+    const loadedTags = getTags();
+    setTags(loadedTags);
   }, []);
   
   const {
@@ -97,20 +82,7 @@ const Clients = () => {
         />
         
         <div>
-          {loading ? (
-            <div className="flex justify-center py-10">
-              <p className="text-muted-foreground">Carregando clientes...</p>
-            </div>
-          ) : (
-            <ClientList 
-              clients={filteredClients}
-              onClientDeleted={async () => {
-                // Reload clients after deletion
-                const updatedClients = await getClients();
-                setClients(updatedClients);
-              }} 
-            />
-          )}
+          <ClientList clients={filteredClients} />
         </div>
       </div>
     </Layout>
