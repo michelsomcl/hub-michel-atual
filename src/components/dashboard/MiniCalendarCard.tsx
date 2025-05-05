@@ -5,6 +5,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Link } from "react-router-dom";
 import { getClients } from "../../services/localStorage";
 import { Task } from "../../types";
+import { Calendar as CalendarIcon } from "lucide-react";
 
 export const MiniCalendarCard = () => {
   const [taskDates, setTaskDates] = useState<Date[]>([]);
@@ -18,7 +19,10 @@ export const MiniCalendarCard = () => {
     clients.forEach(client => {
       client.tasks.forEach(task => {
         if (task.dueDate) {
-          allTaskDates.push(new Date(task.dueDate));
+          // Make sure we normalize the date to midnight
+          const normalizedDate = new Date(task.dueDate);
+          normalizedDate.setHours(0, 0, 0, 0);
+          allTaskDates.push(normalizedDate);
         }
       });
     });
@@ -28,11 +32,22 @@ export const MiniCalendarCard = () => {
   
   // Function to check if a date has tasks
   const hasTasksOnDate = (date: Date): boolean => {
-    return taskDates.some(taskDate => 
-      taskDate.getDate() === date.getDate() && 
-      taskDate.getMonth() === date.getMonth() && 
-      taskDate.getFullYear() === date.getFullYear()
-    );
+    const normalizedDate = new Date(date);
+    normalizedDate.setHours(0, 0, 0, 0);
+    
+    return taskDates.some(taskDate => {
+      const normalizedTaskDate = new Date(taskDate);
+      normalizedTaskDate.setHours(0, 0, 0, 0);
+      return normalizedTaskDate.getTime() === normalizedDate.getTime();
+    });
+  };
+  
+  // Function to check if a date is today
+  const isToday = (date: Date): boolean => {
+    const today = new Date();
+    return date.getDate() === today.getDate() && 
+           date.getMonth() === today.getMonth() && 
+           date.getFullYear() === today.getFullYear();
   };
   
   return (
@@ -52,11 +67,17 @@ export const MiniCalendarCard = () => {
             onSelect={(date) => date && setSelectedDate(date)}
             className="border-0"
             modifiers={{
-              hasTasks: (date) => hasTasksOnDate(date)
+              hasTasks: (date) => hasTasksOnDate(date),
+              today: (date) => isToday(date)
             }}
             modifiersStyles={{
               hasTasks: { 
-                backgroundColor: "#1e40af", 
+                backgroundColor: "#3b82f6", // blue-500
+                color: "white",
+                fontWeight: "bold"
+              },
+              today: {
+                backgroundColor: "#1e40af", // blue-800
                 color: "white",
                 fontWeight: "bold"
               }

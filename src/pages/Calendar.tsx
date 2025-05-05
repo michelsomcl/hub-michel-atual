@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Layout } from "../components/Layout";
 import { Calendar } from "@/components/ui/calendar";
@@ -91,11 +90,22 @@ const CalendarPage = () => {
 
   // Function to check if a date has tasks
   const hasTasksOnDate = (date: Date): boolean => {
-    return taskDates.some(taskDate => 
-      taskDate.getDate() === date.getDate() && 
-      taskDate.getMonth() === date.getMonth() && 
-      taskDate.getFullYear() === date.getFullYear()
-    );
+    const normalizedDate = new Date(date);
+    normalizedDate.setHours(0, 0, 0, 0);
+    
+    return taskDates.some(taskDate => {
+      const normalizedTaskDate = new Date(taskDate);
+      normalizedTaskDate.setHours(0, 0, 0, 0);
+      return normalizedTaskDate.getTime() === normalizedDate.getTime();
+    });
+  };
+
+  // Function to check if a date is today
+  const isToday = (date: Date): boolean => {
+    const today = new Date();
+    return date.getDate() === today.getDate() && 
+           date.getMonth() === today.getMonth() && 
+           date.getFullYear() === today.getFullYear();
   };
 
   // Render different views based on the selected view type
@@ -136,19 +146,6 @@ const CalendarPage = () => {
     );
   };
 
-  // Custom modifiers for the calendar to mark dates with tasks
-  const modifiers = {
-    hasTasks: taskDates.map(date => new Date(date))
-  };
-
-  // Custom styles for days with tasks
-  const modifiersStyles = {
-    hasTasks: {
-      color: "white",
-      backgroundColor: "#1e40af"
-    }
-  };
-
   return (
     <Layout>
       <div className="space-y-6">
@@ -181,11 +178,17 @@ const CalendarPage = () => {
                     onSelect={(date) => date && setSelectedDate(date)}
                     className="border-0"
                     modifiers={{
-                      hasTasks: (date) => hasTasksOnDate(date)
+                      hasTasks: (date) => hasTasksOnDate(date),
+                      today: (date) => isToday(date)
                     }}
                     modifiersStyles={{
                       hasTasks: { 
-                        backgroundColor: "#1e40af", 
+                        backgroundColor: "#3b82f6", // blue-500
+                        color: "white",
+                        fontWeight: "bold"
+                      },
+                      today: {
+                        backgroundColor: "#1e40af", // blue-800 
                         color: "white",
                         fontWeight: "bold"
                       }

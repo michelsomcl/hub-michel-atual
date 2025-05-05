@@ -41,7 +41,8 @@ export const ClientDetails = ({
       description: newTask,
       completed: false,
       createdAt: new Date(),
-      dueDate: taskDueDate ? new Date(taskDueDate) : undefined,
+      // Fix date offset issue by handling date creation properly
+      dueDate: taskDueDate ? new Date(taskDueDate + "T00:00:00") : undefined,
     };
     
     onTaskAdd(task);

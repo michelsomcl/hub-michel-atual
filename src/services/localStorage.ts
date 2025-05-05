@@ -75,6 +75,12 @@ export const getTags = (): Tag[] => {
   }
 };
 
+export const clearLocalStorage = (): void => {
+  localStorage.removeItem(CLIENTS_KEY);
+  localStorage.removeItem(TAGS_KEY);
+  console.log('LocalStorage data cleared successfully');
+};
+
 export const initializeLocalStorage = (): void => {
   // Verificar se já existem dados no localStorage
   if (!localStorage.getItem(CLIENTS_KEY) || !localStorage.getItem(TAGS_KEY)) {

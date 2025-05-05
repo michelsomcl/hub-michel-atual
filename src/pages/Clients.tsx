@@ -5,7 +5,7 @@ import { ClientsHeader } from "../components/ClientsHeader";
 import { ClientFilters } from "../components/ClientFilters";
 import { ClientList } from "../components/ClientList";
 import { Client, Tag } from "../types";
-import { getClients, getTags } from "../services/supabaseClient";
+import { getClients, getTags, clearLocalStorage } from "../services/supabaseClient";
 import { useSearchParams } from "react-router-dom";
 import { useClientFilters } from "../hooks/useClientFilters";
 import { toast } from "@/components/ui/use-toast";
@@ -31,6 +31,11 @@ const Clients = () => {
     handleLevelChange,
     clearFilters
   } = useClientFilters(clients, initialSearch, initialTagId);
+
+  // Clear localStorage when mounting to ensure no conflicts with Supabase
+  useEffect(() => {
+    clearLocalStorage();
+  }, []);
 
   // Buscar clientes e tags quando o componente montar
   useEffect(() => {
@@ -74,7 +79,6 @@ const Clients = () => {
           onTagChange={handleTagChange}
           onLevelChange={handleLevelChange}
           clearFilters={clearFilters}
-          // Remova a propriedade isLoading, pois ela não existe no tipo ClientFiltersProps
         />
         
         <ClientList clients={filteredClients} />

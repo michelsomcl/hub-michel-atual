@@ -6,3 +6,4 @@ export * from './clientService';
 export * from './tagService';
 export * from './serviceHistoryService';
 export * from './taskService';
+export * from './localStorage';
