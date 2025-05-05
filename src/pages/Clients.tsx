@@ -73,8 +73,8 @@ const Clients = () => {
           onSearch={handleSearch}
           onTagChange={handleTagChange}
           onLevelChange={handleLevelChange}
-          clearFilters={clearFilters} // Corrigido de onClearFilters para clearFilters
-          isLoading={isLoading}
+          clearFilters={clearFilters}
+          // Remova a propriedade isLoading, pois ela não existe no tipo ClientFiltersProps
         />
         
         <ClientList clients={filteredClients} />
