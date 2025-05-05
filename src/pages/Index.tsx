@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Layout } from "../components/Layout";
-import { Client } from "../types";
+import { Client, Task } from "../types";
 import { getClients, getTags, clearLocalStorage } from "../services/supabaseClient";
 import { DashboardHeader } from "../components/dashboard/DashboardHeader";
 import { SummaryCards } from "../components/dashboard/SummaryCards";
@@ -10,6 +10,10 @@ import { RecentClientsCard } from "../components/dashboard/RecentClientsCard";
 import { MiniCalendarCard } from "../components/dashboard/MiniCalendarCard";
 import { toast } from "@/hooks/use-toast";
 
+interface ClientWithTask extends Client {
+  pendingTask?: Task;
+}
+
 const Index = () => {
   const [totalClients, setTotalClients] = useState(0);
   const [totalLeads, setTotalLeads] = useState(0);
@@ -17,7 +21,7 @@ const Index = () => {
   const [pendingTasks, setPendingTasks] = useState(0);
   const [recentClients, setRecentClients] = useState<Client[]>([]);
   const [allClients, setAllClients] = useState<Client[]>([]);
-  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
+  const [filteredClients, setFilteredClients] = useState<ClientWithTask[]>([]);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [filterTitle, setFilterTitle] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
@@ -81,14 +85,14 @@ const Index = () => {
     setActiveFilter(filterKey);
     setFilterTitle(title);
     
-    let filtered: Client[] = [];
+    let filtered: ClientWithTask[] = [];
     
     switch(filterKey) {
       case 'totalClients':
-        filtered = [...allClients];
+        filtered = [...allClients] as ClientWithTask[];
         break;
       case 'totalLeads':
-        filtered = allClients.filter(client => client.level === 'Lead');
+        filtered = allClients.filter(client => client.level === 'Lead') as ClientWithTask[];
         break;
       case 'clientsToday':
         const today = new Date();
@@ -97,12 +101,28 @@ const Index = () => {
           const clientDate = new Date(client.createdAt);
           clientDate.setHours(0, 0, 0, 0);
           return clientDate.getTime() === today.getTime();
-        });
+        }) as ClientWithTask[];
         break;
       case 'pendingTasks':
-        filtered = allClients.filter(client => 
-          client.tasks.some(task => !task.completed)
-        );
+        filtered = allClients
+          .filter(client => client.tasks.some(task => !task.completed))
+          .map(client => {
+            // Find the first pending task for this client
+            const pendingTask = client.tasks.find(task => !task.completed);
+            
+            // Return client with the pending task attached
+            return {
+              ...client,
+              pendingTask: pendingTask
+            };
+          });
+        
+        // Sort by due date if available
+        filtered.sort((a, b) => {
+          const dateA = a.pendingTask?.dueDate ? new Date(a.pendingTask.dueDate) : new Date();
+          const dateB = b.pendingTask?.dueDate ? new Date(b.pendingTask.dueDate) : new Date();
+          return dateA.getTime() - dateB.getTime();
+        });
         break;
       default:
         filtered = [];
