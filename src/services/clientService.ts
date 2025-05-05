@@ -1,9 +1,12 @@
+
 import { supabase } from "./baseService";
 import { Client } from "../types";
 
 // ====== CLIENTS ======
 export const getClients = async (): Promise<Client[]> => {
   try {
+    console.log("Starting to fetch clients data...");
+    
     // Primeiro, buscar todos os clientes
     const { data: clients, error } = await supabase
       .from('clients')
@@ -13,6 +16,8 @@ export const getClients = async (): Promise<Client[]> => {
       console.error('Erro ao buscar clientes:', error);
       return [];
     }
+
+    console.log(`Retrieved ${clients.length} clients from database`);
 
     // Formatar os clientes com arrays vazios para relações
     const formattedClients = clients.map((client: any) => ({
@@ -35,6 +40,8 @@ export const getClients = async (): Promise<Client[]> => {
 
     if (tagsError) {
       console.error('Erro ao buscar tags:', tagsError);
+    } else {
+      console.log(`Retrieved ${allTags.length} tags from database`);
     }
 
     // Buscar todas as relações cliente-tag
@@ -45,6 +52,8 @@ export const getClients = async (): Promise<Client[]> => {
     if (clientTagsError) {
       console.error('Erro ao buscar relações cliente-tag:', clientTagsError);
     } else if (clientTags && allTags) {
+      console.log(`Retrieved ${clientTags.length} client-tag relationships`);
+      
       // Mapear as tags para cada cliente
       clientTags.forEach((ct: any) => {
         const clientIndex = formattedClients.findIndex(c => c.id === ct.client_id);
@@ -59,6 +68,12 @@ export const getClients = async (): Promise<Client[]> => {
           }
         }
       });
+      
+      // Logging para debug
+      formattedClients.forEach(client => {
+        console.log(`Client ${client.name} has ${client.tags.length} tags:`, 
+          client.tags.map(tag => tag.name).join(', '));
+      });
     }
 
     // Buscar todas as tarefas
@@ -69,6 +84,8 @@ export const getClients = async (): Promise<Client[]> => {
     if (tasksError) {
       console.error('Erro ao buscar tarefas:', tasksError);
     } else if (tasks) {
+      console.log(`Retrieved ${tasks.length} tasks from database`);
+      
       // Mapear as tarefas para cada cliente
       tasks.forEach((task: any) => {
         const clientIndex = formattedClients.findIndex(c => c.id === task.client_id);
@@ -93,6 +110,8 @@ export const getClients = async (): Promise<Client[]> => {
     if (serviceHistoryError) {
       console.error('Erro ao buscar histórico de serviços:', serviceHistoryError);
     } else if (serviceHistory) {
+      console.log(`Retrieved ${serviceHistory.length} service history entries from database`);
+      
       // Mapear o histórico de serviços para cada cliente
       serviceHistory.forEach((sh: any) => {
         const clientIndex = formattedClients.findIndex(c => c.id === sh.client_id);
@@ -108,6 +127,7 @@ export const getClients = async (): Promise<Client[]> => {
       });
     }
 
+    console.log("Finished preparing client data with all relations");
     return formattedClients;
   } catch (error) {
     console.error('Erro ao buscar clientes e relações:', error);

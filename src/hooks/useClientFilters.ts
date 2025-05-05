@@ -22,11 +22,14 @@ export const useClientFilters = (
       );
     }
     
-    // Apply tag filter
+    // Apply tag filter - ensure we're properly checking the client's tags array
     if (tagId) {
-      filtered = filtered.filter(client => 
-        client.tags.some(tag => tag.id === tagId)
-      );
+      console.log("Filtering by tag ID:", tagId);
+      filtered = filtered.filter(client => {
+        const hasTag = client.tags && client.tags.some(tag => tag.id === tagId);
+        console.log(`Client ${client.name} has tag ${tagId}:`, hasTag, client.tags);
+        return hasTag;
+      });
     }
     
     // Apply level filter
@@ -34,6 +37,7 @@ export const useClientFilters = (
       filtered = filtered.filter(client => client.level === level);
     }
     
+    console.log("Filtered clients:", filtered.length);
     setFilteredClients(filtered);
   };
 
@@ -47,6 +51,7 @@ export const useClientFilters = (
   };
   
   const handleTagChange = (tagId: string | null) => {
+    console.log("Tag changed to:", tagId);
     setSelectedTagId(tagId);
     return tagId;
   };

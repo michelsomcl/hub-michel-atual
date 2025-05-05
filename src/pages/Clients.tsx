@@ -5,7 +5,7 @@ import { ClientsHeader } from "../components/ClientsHeader";
 import { ClientFilters } from "../components/ClientFilters";
 import { ClientList } from "../components/ClientList";
 import { Client, Tag } from "../types";
-import { getClients, getTags, clearLocalStorage } from "../services/supabaseClient";
+import { getClients, getTags } from "../services";
 import { useSearchParams } from "react-router-dom";
 import { useClientFilters } from "../hooks/useClientFilters";
 import { toast } from "@/components/ui/use-toast";
@@ -32,11 +32,6 @@ const Clients = () => {
     clearFilters
   } = useClientFilters(clients, initialSearch, initialTagId);
 
-  // Clear localStorage when mounting to ensure no conflicts with Supabase
-  useEffect(() => {
-    clearLocalStorage();
-  }, []);
-
   // Buscar clientes e tags quando o componente montar
   useEffect(() => {
     const fetchData = async () => {
@@ -44,11 +39,16 @@ const Clients = () => {
         setIsLoading(true);
         
         // Carregar clientes
+        console.log("Fetching clients...");
         const clientsData = await getClients();
+        console.log("Retrieved clients:", clientsData.length);
+        console.log("First client tags:", clientsData[0]?.tags);
         setClients(clientsData);
         
         // Carregar tags
+        console.log("Fetching tags...");
         const tagsData = await getTags();
+        console.log("Retrieved tags:", tagsData.length);
         setTags(tagsData);
       } catch (error) {
         console.error("Erro ao carregar dados:", error);

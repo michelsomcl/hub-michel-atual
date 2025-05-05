@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Trash } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { deleteClient } from "../services/supabaseClient";
+import { deleteClient } from "../services";
 
 interface ClientListProps {
   clients: Client[];
@@ -103,11 +103,15 @@ export const ClientList = ({ clients, isLoading = false }: ClientListProps) => {
               <TableCell>{client.source}</TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-1">
-                  {client.tags.map((tag) => (
-                    <Badge key={tag.id} variant="secondary" className="text-xs">
-                      {tag.name}
-                    </Badge>
-                  ))}
+                  {client.tags && client.tags.length > 0 ? (
+                    client.tags.map((tag) => (
+                      <Badge key={tag.id} variant="secondary" className="text-xs">
+                        {tag.name}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-muted-foreground text-xs">Sem tags</span>
+                  )}
                 </div>
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">
