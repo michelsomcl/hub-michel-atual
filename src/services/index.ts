@@ -15,8 +15,8 @@ export {
 export { addServiceHistory } from './serviceHistoryService';
 export { addTask, updateTaskCompletion } from './taskService';
 export { 
-  getClientsFromLocalStorage,
-  getTagsFromLocalStorage,
+  getClients as getClientsFromLocalStorage,
+  getTags as getTagsFromLocalStorage,
   saveClients,
   saveTags,
   clearLocalStorage,

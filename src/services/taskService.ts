@@ -5,13 +5,26 @@ import { Task } from "../types";
 // ====== TASKS ======
 export const addTask = async (task: Task): Promise<Task | null> => {
   try {
+    console.log("Adicionando tarefa:", task);
+    
+    // Garantir que a data seja armazenada em UTC
+    let dueDateISO = null;
+    if (task.dueDate) {
+      // Criar uma cópia da data para não modificar o objeto original
+      const dueDate = new Date(task.dueDate);
+      // Certificar que estamos usando a data exata e não convertendo para UTC
+      dueDateISO = dueDate.toISOString();
+      console.log("Data original:", task.dueDate);
+      console.log("Data ISO para salvar:", dueDateISO);
+    }
+    
     // Preparar objeto de tarefa para o Supabase
     const taskData = {
       id: task.id,
       client_id: task.clientId,
       description: task.description,
       completed: task.completed,
-      due_date: task.dueDate ? task.dueDate.toISOString() : null
+      due_date: dueDateISO
       // Não incluímos created_at pois é gerenciado pelo banco
     };
 
@@ -27,6 +40,9 @@ export const addTask = async (task: Task): Promise<Task | null> => {
       return null;
     }
 
+    console.log("Tarefa salva com sucesso:", savedTask);
+    
+    // Retornar tarefa no formato da aplicação
     return {
       id: savedTask.id,
       clientId: savedTask.client_id,

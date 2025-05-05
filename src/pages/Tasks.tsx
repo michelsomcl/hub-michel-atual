@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from "react";
 import { Layout } from "../components/Layout";
 import { Task, Client } from "../types";
-import { getClients } from "../services/localStorage";
+import { getClients } from "../services";
 import {
   Tabs,
   TabsContent,
@@ -20,6 +19,7 @@ import {
   ChevronRight, 
   Square 
 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 // Extended task with client information
 interface ExtendedTask extends Task {
@@ -33,30 +33,47 @@ const Tasks = () => {
   const [filteredTasks, setFilteredTasks] = useState<ExtendedTask[]>([]);
   const [filter, setFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    const clients = getClients();
-    
-    const allTasks: ExtendedTask[] = [];
-    clients.forEach(client => {
-      client.tasks.forEach(task => {
-        allTasks.push({
-          ...task,
-          clientName: client.name,
-          clientId: client.id
+    const fetchClients = async () => {
+      try {
+        setIsLoading(true);
+        const clients = await getClients();
+        
+        const allTasks: ExtendedTask[] = [];
+        clients.forEach(client => {
+          client.tasks.forEach(task => {
+            allTasks.push({
+              ...task,
+              clientName: client.name,
+              clientId: client.id
+            });
+          });
         });
-      });
-    });
+        
+        // Sort tasks by due date if available, otherwise by creation date
+        const sortedTasks = allTasks.sort((a, b) => {
+          const dateA = a.dueDate ? new Date(a.dueDate) : new Date(a.createdAt);
+          const dateB = b.dueDate ? new Date(b.dueDate) : new Date(b.createdAt);
+          return dateA.getTime() - dateB.getTime();
+        });
+        
+        setTasks(sortedTasks);
+        setFilteredTasks(sortedTasks);
+      } catch (error) {
+        console.error("Erro ao carregar tarefas:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar as tarefas. Tente novamente.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    // Sort tasks by due date if available, otherwise by creation date
-    const sortedTasks = allTasks.sort((a, b) => {
-      const dateA = a.dueDate ? new Date(a.dueDate) : new Date(a.createdAt);
-      const dateB = b.dueDate ? new Date(b.dueDate) : new Date(b.createdAt);
-      return dateA.getTime() - dateB.getTime();
-    });
-    
-    setTasks(sortedTasks);
-    setFilteredTasks(sortedTasks);
+    fetchClients();
   }, []);
   
   useEffect(() => {
@@ -108,6 +125,19 @@ const Tasks = () => {
     );
   };
   
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="space-y-8">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Tarefas</h1>
+            <p className="text-muted-foreground">Carregando tarefas...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+  
   return (
     <Layout>
       <div className="space-y-8">
@@ -128,7 +158,7 @@ const Tasks = () => {
           </Tabs>
           
           <div className="w-full md:max-w-md">
-            <SearchBar onSearch={handleSearch} placeholder="Buscar por descrição ou cliente..." />
+            <SearchBar onSearch={setSearchTerm} placeholder="Buscar por descrição ou cliente..." />
           </div>
         </div>
         

@@ -3,31 +3,44 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Link } from "react-router-dom";
-import { getClients } from "../../services/localStorage";
+import { getClients } from "../../services";
 import { Task } from "../../types";
 import { Calendar as CalendarIcon } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 export const MiniCalendarCard = () => {
   const [taskDates, setTaskDates] = useState<Date[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
     // Extract all task dates from clients
-    const clients = getClients();
-    const allTaskDates: Date[] = [];
+    const fetchTasks = async () => {
+      try {
+        setIsLoading(true);
+        const clients = await getClients();
+        const allTaskDates: Date[] = [];
+        
+        clients.forEach(client => {
+          client.tasks.forEach(task => {
+            if (task.dueDate) {
+              // Make sure we normalize the date to midnight
+              const normalizedDate = new Date(task.dueDate);
+              normalizedDate.setHours(0, 0, 0, 0);
+              allTaskDates.push(normalizedDate);
+            }
+          });
+        });
+        
+        setTaskDates(allTaskDates);
+      } catch (error) {
+        console.error("Erro ao carregar datas das tarefas:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    clients.forEach(client => {
-      client.tasks.forEach(task => {
-        if (task.dueDate) {
-          // Make sure we normalize the date to midnight
-          const normalizedDate = new Date(task.dueDate);
-          normalizedDate.setHours(0, 0, 0, 0);
-          allTaskDates.push(normalizedDate);
-        }
-      });
-    });
-    
-    setTaskDates(allTaskDates);
+    fetchTasks();
   }, []);
   
   // Function to check if a date has tasks
@@ -65,7 +78,7 @@ export const MiniCalendarCard = () => {
             mode="single"
             selected={selectedDate}
             onSelect={(date) => date && setSelectedDate(date)}
-            className="border-0"
+            className="border-0 pointer-events-auto"
             modifiers={{
               hasTasks: (date) => hasTasksOnDate(date),
               today: (date) => isToday(date)

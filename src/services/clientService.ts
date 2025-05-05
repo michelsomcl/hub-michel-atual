@@ -1,28 +1,118 @@
-
 import { supabase } from "./baseService";
 import { Client } from "../types";
 
 // ====== CLIENTS ======
 export const getClients = async (): Promise<Client[]> => {
-  const { data: clients, error } = await supabase
-    .from('clients')
-    .select('*');
+  try {
+    // Primeiro, buscar todos os clientes
+    const { data: clients, error } = await supabase
+      .from('clients')
+      .select('*');
 
-  if (error) {
-    console.error('Erro ao buscar clientes:', error);
+    if (error) {
+      console.error('Erro ao buscar clientes:', error);
+      return [];
+    }
+
+    // Formatar os clientes com arrays vazios para relações
+    const formattedClients = clients.map((client: any) => ({
+      id: client.id,
+      name: client.name,
+      phone: client.phone,
+      source: client.source,
+      level: client.level as 'Lead' | 'Cliente',
+      createdAt: new Date(client.created_at),
+      updatedAt: new Date(client.updated_at),
+      serviceHistory: [],
+      tasks: [],
+      tags: []
+    }));
+
+    // Buscar todas as tags para uso posterior
+    const { data: allTags, error: tagsError } = await supabase
+      .from('tags')
+      .select('*');
+
+    if (tagsError) {
+      console.error('Erro ao buscar tags:', tagsError);
+    }
+
+    // Buscar todas as relações cliente-tag
+    const { data: clientTags, error: clientTagsError } = await supabase
+      .from('client_tags')
+      .select('*');
+
+    if (clientTagsError) {
+      console.error('Erro ao buscar relações cliente-tag:', clientTagsError);
+    } else if (clientTags && allTags) {
+      // Mapear as tags para cada cliente
+      clientTags.forEach((ct: any) => {
+        const clientIndex = formattedClients.findIndex(c => c.id === ct.client_id);
+        if (clientIndex !== -1) {
+          const tag = allTags.find((t: any) => t.id === ct.tag_id);
+          if (tag) {
+            formattedClients[clientIndex].tags.push({
+              id: tag.id,
+              name: tag.name,
+              createdAt: new Date(tag.created_at)
+            });
+          }
+        }
+      });
+    }
+
+    // Buscar todas as tarefas
+    const { data: tasks, error: tasksError } = await supabase
+      .from('tasks')
+      .select('*');
+
+    if (tasksError) {
+      console.error('Erro ao buscar tarefas:', tasksError);
+    } else if (tasks) {
+      // Mapear as tarefas para cada cliente
+      tasks.forEach((task: any) => {
+        const clientIndex = formattedClients.findIndex(c => c.id === task.client_id);
+        if (clientIndex !== -1) {
+          formattedClients[clientIndex].tasks.push({
+            id: task.id,
+            clientId: task.client_id,
+            description: task.description,
+            completed: task.completed,
+            createdAt: new Date(task.created_at),
+            dueDate: task.due_date ? new Date(task.due_date) : undefined
+          });
+        }
+      });
+    }
+
+    // Buscar todo o histórico de serviços
+    const { data: serviceHistory, error: serviceHistoryError } = await supabase
+      .from('service_history')
+      .select('*');
+
+    if (serviceHistoryError) {
+      console.error('Erro ao buscar histórico de serviços:', serviceHistoryError);
+    } else if (serviceHistory) {
+      // Mapear o histórico de serviços para cada cliente
+      serviceHistory.forEach((sh: any) => {
+        const clientIndex = formattedClients.findIndex(c => c.id === sh.client_id);
+        if (clientIndex !== -1) {
+          formattedClients[clientIndex].serviceHistory.push({
+            id: sh.id,
+            clientId: sh.client_id,
+            date: new Date(sh.date),
+            observations: sh.observations,
+            createdAt: new Date(sh.created_at)
+          });
+        }
+      });
+    }
+
+    return formattedClients;
+  } catch (error) {
+    console.error('Erro ao buscar clientes e relações:', error);
     return [];
   }
-
-  // Formatando as datas
-  return clients.map((client: any) => ({
-    ...client,
-    id: client.id,
-    createdAt: new Date(client.created_at),
-    updatedAt: new Date(client.updated_at),
-    serviceHistory: [], // Será preenchido depois
-    tasks: [], // Será preenchido depois
-    tags: [], // Será preenchido depois
-  }));
 };
 
 export const getClientWithRelations = async (clientId: string): Promise<Client | null> => {
@@ -127,6 +217,9 @@ export const getClientWithRelations = async (clientId: string): Promise<Client |
 
 export const saveClient = async (client: Client): Promise<Client | null> => {
   try {
+    console.log("Salvando cliente:", client);
+    console.log("Tags do cliente:", client.tags);
+    
     // Preparar objeto do cliente para o Supabase
     const clientData = {
       id: client.id,
@@ -149,6 +242,8 @@ export const saveClient = async (client: Client): Promise<Client | null> => {
       return null;
     }
 
+    console.log("Cliente salvo com sucesso:", savedClient);
+
     // Se for uma atualização, vamos limpar as relações existentes antes de recriar
     if (client.id) {
       // Não vamos apagar serviços e tarefas, apenas tags
@@ -159,22 +254,29 @@ export const saveClient = async (client: Client): Promise<Client | null> => {
 
       if (deleteTagsError) {
         console.error('Erro ao limpar tags do cliente:', deleteTagsError);
+      } else {
+        console.log("Tags antigas removidas com sucesso");
       }
     }
 
     // Salvar tags relacionadas
-    if (client.tags.length > 0) {
+    if (client.tags && client.tags.length > 0) {
+      console.log("Salvando tags relacionadas:", client.tags);
+      
       const clientTagsData = client.tags.map(tag => ({
         client_id: savedClient.id,
         tag_id: tag.id
       }));
 
-      const { error: tagsError } = await supabase
+      const { data: insertedTags, error: tagsError } = await supabase
         .from('client_tags')
-        .insert(clientTagsData);
+        .insert(clientTagsData)
+        .select();
 
       if (tagsError) {
         console.error('Erro ao salvar tags do cliente:', tagsError);
+      } else {
+        console.log("Tags relacionadas salvas com sucesso:", insertedTags);
       }
     }
 
