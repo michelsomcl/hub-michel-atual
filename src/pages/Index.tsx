@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Layout } from "../components/Layout";
 import { Client } from "../types";
-import { getClients, getTags } from "../services/supabaseClient";
+import { getClients, getTags, clearLocalStorage } from "../services/supabaseClient";
 import { DashboardHeader } from "../components/dashboard/DashboardHeader";
 import { SummaryCards } from "../components/dashboard/SummaryCards";
 import { FilteredClientsList } from "../components/dashboard/FilteredClientsList";
@@ -21,6 +21,11 @@ const Index = () => {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [filterTitle, setFilterTitle] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    // Clear localStorage when mounting to ensure no conflicts with Supabase
+    clearLocalStorage();
+  }, []);
   
   useEffect(() => {
     const fetchData = async () => {

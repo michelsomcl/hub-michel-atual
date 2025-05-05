@@ -81,7 +81,7 @@ const Clients = () => {
           clearFilters={clearFilters}
         />
         
-        <ClientList clients={filteredClients} />
+        <ClientList clients={filteredClients} isLoading={isLoading} />
       </div>
     </Layout>
   );
