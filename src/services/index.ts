@@ -1,12 +1,12 @@
 
-// Arquivo de barrel para exportar todos os serviços
+// Barrel file to export all services
 export { supabase, initializeDatabase } from './baseService';
 export { 
   getClients,
   getClientWithRelations,
   saveClient,
   deleteClient
-} from './clientService';
+} from './client';
 export { 
   getTags,
   saveTag,

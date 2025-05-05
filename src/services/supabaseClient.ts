@@ -1,15 +1,15 @@
 
-// Este arquivo agora apenas reexporta tudo dos arquivos de serviço individuais
-// para manter compatibilidade com código existente
+// This file reexports everything from the individual service files
+// to maintain compatibility with existing code
 export { supabase, initializeDatabase } from './baseService';
 
-// Serviços do Supabase (com prioridade na exportação)
+// Supabase services (with priority in the export)
 export {
   getClients,
   getClientWithRelations,
   saveClient,
   deleteClient
-} from './clientService';
+} from './client';
 
 export {
   getTags,
@@ -26,7 +26,7 @@ export {
   updateTaskCompletion
 } from './taskService';
 
-// Funções do localStorage - renomeando para evitar conflitos
+// LocalStorage functions - renamed to avoid conflicts
 export {
   getClients as getClientsFromLocalStorage,
   getTags as getTagsFromLocalStorage,
