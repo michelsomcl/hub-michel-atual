@@ -13,9 +13,10 @@ import { deleteClient } from "../services/supabaseClient";
 
 interface ClientListProps {
   clients: Client[];
+  isLoading?: boolean;
 }
 
-export const ClientList = ({ clients }: ClientListProps) => {
+export const ClientList = ({ clients, isLoading = false }: ClientListProps) => {
   const navigate = useNavigate();
 
   const handleDeleteClient = async (clientId: string, event: React.MouseEvent) => {
@@ -54,6 +55,14 @@ export const ClientList = ({ clients }: ClientListProps) => {
   const sortedClients = [...clients].sort((a, b) => 
     a.name.localeCompare(b.name)
   );
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-muted-foreground">Carregando clientes...</p>
+      </div>
+    );
+  }
 
   if (sortedClients.length === 0) {
     return (

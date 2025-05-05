@@ -5,14 +5,14 @@ export { supabase, initializeDatabase } from './baseService';
 
 // Serviços do Supabase (com prioridade na exportação)
 export {
-  getClients as getClientsFromDB,
+  getClients,
   getClientWithRelations,
   saveClient,
   deleteClient
 } from './clientService';
 
 export {
-  getTags as getTagsFromDB,
+  getTags,
   saveTag,
   deleteTag
 } from './tagService';
@@ -35,7 +35,3 @@ export {
   clearLocalStorage,
   initializeLocalStorage
 } from './localStorage';
-
-// Para compatibilidade com código existente, exporte as funções do Supabase como padrão
-export const getClients = getClientsFromDB;
-export const getTags = getTagsFromDB;
