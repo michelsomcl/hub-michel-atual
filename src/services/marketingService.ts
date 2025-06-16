@@ -1,6 +1,6 @@
 
 import { supabase } from "./baseService";
-import { Client, Tag } from "../types";
+import { Client, Tag, ClientLevel } from "../types";
 
 export interface MarketingMessage {
   id: string;
@@ -91,7 +91,7 @@ export const getMarketingMessages = async (): Promise<MarketingMessage[]> => {
           name: client.name,
           phone: client.phone,
           source: client.source,
-          level: client.level,
+          level: client.level as ClientLevel, // Fazer cast explícito para ClientLevel
           createdAt: new Date(client.created_at),
           updatedAt: new Date(client.updated_at),
           serviceHistory: [],
