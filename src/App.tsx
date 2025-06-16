@@ -11,6 +11,7 @@ import NewClient from "./pages/NewClient";
 import Tags from "./pages/Tags";
 import Calendar from "./pages/Calendar";
 import Tasks from "./pages/Tasks";
+import Marketing from "./pages/Marketing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/tags" element={<Tags />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/tasks" element={<Tasks />} />
+          <Route path="/marketing" element={<Marketing />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

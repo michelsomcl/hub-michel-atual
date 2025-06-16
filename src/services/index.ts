@@ -15,6 +15,11 @@ export {
 export { addServiceHistory } from './serviceHistoryService';
 export { addTask, updateTaskCompletion } from './taskService';
 export { 
+  getMarketingMessages,
+  updateMarketingMessages,
+  sendToWebhook
+} from './marketingService';
+export { 
   getClients as getClientsFromLocalStorage,
   getTags as getTagsFromLocalStorage,
   saveClients,

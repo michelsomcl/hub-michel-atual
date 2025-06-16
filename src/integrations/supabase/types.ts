@@ -72,6 +72,44 @@ export type Database = {
         }
         Relationships: []
       }
+      marketing_messages: {
+        Row: {
+          client_id: string
+          created_at: string
+          first_name: string
+          id: string
+          message: string | null
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          first_name: string
+          id?: string
+          message?: string | null
+          phone: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          first_name?: string
+          id?: string
+          message?: string | null
+          phone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_history: {
         Row: {
           client_id: string
