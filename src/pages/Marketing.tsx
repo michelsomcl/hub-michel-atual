@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Layout } from "../components/Layout";
 import { Button } from "@/components/ui/button";
@@ -200,14 +199,6 @@ const Marketing = () => {
           </p>
         </div>
 
-        {/* Filtros */}
-        <MarketingFilters
-          filters={filters}
-          tags={allTags}
-          onFilterChange={handleFilterChange}
-          onClearFilters={clearFilters}
-        />
-
         {/* Configurações de Mensagem */}
         <Card>
           <CardHeader>
@@ -252,6 +243,14 @@ const Marketing = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Filtros */}
+        <MarketingFilters
+          filters={filters}
+          tags={allTags}
+          onFilterChange={handleFilterChange}
+          onClearFilters={clearFilters}
+        />
 
         {/* Lista de Clientes */}
         <Card>
