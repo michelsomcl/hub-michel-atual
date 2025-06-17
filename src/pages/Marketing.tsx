@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Send, MessageSquare } from "lucide-react";
+import { MarketingFilters } from "../components/MarketingFilters";
+import { useMarketingFilters } from "../hooks/useMarketingFilters";
 import { 
   getMarketingMessages, 
   updateMarketingMessages, 
@@ -24,6 +26,14 @@ const Marketing = () => {
   const [webhookUrl, setWebhookUrl] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+
+  // Hook de filtros
+  const { 
+    filters, 
+    filteredMessages, 
+    handleFilterChange, 
+    clearFilters 
+  } = useMarketingFilters(messages);
 
   // Carregar mensagens de marketing
   useEffect(() => {
@@ -47,6 +57,18 @@ const Marketing = () => {
     fetchMessages();
   }, []);
 
+  // Extrair tags únicas de todas as mensagens
+  const allTags = messages.reduce((acc, msg) => {
+    if (msg.tags) {
+      msg.tags.forEach(tag => {
+        if (!acc.some(t => t.id === tag.id)) {
+          acc.push(tag);
+        }
+      });
+    }
+    return acc;
+  }, [] as any[]);
+
   // Selecionar/deselecionar cliente
   const handleClientSelection = (clientId: string, checked: boolean) => {
     if (checked) {
@@ -56,10 +78,10 @@ const Marketing = () => {
     }
   };
 
-  // Selecionar/deselecionar todos
+  // Selecionar/deselecionar todos (baseado nos filtrados)
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedClients(messages.map(msg => msg.client_id));
+      setSelectedClients(filteredMessages.map(msg => msg.client_id));
     } else {
       setSelectedClients([]);
     }
@@ -124,7 +146,7 @@ const Marketing = () => {
       return;
     }
 
-    const selectedMessages = messages.filter(msg => 
+    const selectedMessages = filteredMessages.filter(msg => 
       selectedClients.includes(msg.client_id) && msg.message
     );
 
@@ -178,6 +200,14 @@ const Marketing = () => {
           </p>
         </div>
 
+        {/* Filtros */}
+        <MarketingFilters
+          filters={filters}
+          tags={allTags}
+          onFilterChange={handleFilterChange}
+          onClearFilters={clearFilters}
+        />
+
         {/* Configurações de Mensagem */}
         <Card>
           <CardHeader>
@@ -226,7 +256,9 @@ const Marketing = () => {
         {/* Lista de Clientes */}
         <Card>
           <CardHeader>
-            <CardTitle>Clientes ({messages.length})</CardTitle>
+            <CardTitle>
+              Clientes ({filteredMessages.length} de {messages.length})
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
@@ -234,7 +266,7 @@ const Marketing = () => {
                 <TableRow>
                   <TableHead className="w-[50px]">
                     <Checkbox
-                      checked={selectedClients.length === messages.length && messages.length > 0}
+                      checked={selectedClients.length === filteredMessages.length && filteredMessages.length > 0}
                       onCheckedChange={handleSelectAll}
                     />
                   </TableHead>
@@ -246,7 +278,7 @@ const Marketing = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {messages.map((msg) => (
+                {filteredMessages.map((msg) => (
                   <TableRow key={msg.id}>
                     <TableCell>
                       <Checkbox
@@ -292,10 +324,13 @@ const Marketing = () => {
               </TableBody>
             </Table>
 
-            {messages.length === 0 && (
+            {filteredMessages.length === 0 && (
               <div className="text-center py-10">
                 <p className="text-muted-foreground">
-                  Nenhum cliente encontrado para marketing
+                  {messages.length === 0 
+                    ? "Nenhum cliente encontrado para marketing"
+                    : "Nenhum cliente corresponde aos filtros aplicados"
+                  }
                 </p>
               </div>
             )}
