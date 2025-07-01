@@ -8,13 +8,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Send, MessageSquare } from "lucide-react";
+import { Send, MessageSquare, Trash2 } from "lucide-react";
 import { MarketingFilters } from "../components/MarketingFilters";
 import { useMarketingFilters } from "../hooks/useMarketingFilters";
 import { 
   getMarketingMessages, 
   updateMarketingMessages, 
   sendToWebhook,
+  deleteMarketingMessages,
   type MarketingMessage 
 } from "../services/marketingService";
 
@@ -120,7 +121,6 @@ const Marketing = () => {
         });
         
         setBulkMessage("");
-        setSelectedClients([]);
       } else {
         throw new Error("Falha ao atualizar mensagens");
       }
@@ -129,6 +129,44 @@ const Marketing = () => {
       toast({
         title: "Erro",
         description: "Não foi possível atribuir a mensagem.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Deletar mensagens selecionadas
+  const handleDeleteMessages = async () => {
+    if (selectedClients.length === 0) {
+      toast({
+        title: "Atenção",
+        description: "Selecione pelo menos um cliente.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const success = await deleteMarketingMessages(selectedClients);
+      
+      if (success) {
+        // Recarregar mensagens
+        const updatedMessages = await getMarketingMessages();
+        setMessages(updatedMessages);
+        
+        toast({
+          title: "Sucesso",
+          description: `Mensagens removidas de ${selectedClients.length} cliente(s).`
+        });
+        
+        setSelectedClients([]);
+      } else {
+        throw new Error("Falha ao deletar mensagens");
+      }
+    } catch (error) {
+      console.error("Erro ao deletar mensagens:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível deletar as mensagens.",
         variant: "destructive"
       });
     }
@@ -239,6 +277,15 @@ const Marketing = () => {
               >
                 <Send className="h-4 w-4 mr-2" />
                 {isSending ? "Enviando..." : "Enviar para Webhook"}
+              </Button>
+
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteMessages}
+                disabled={selectedClients.length === 0}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir Mensagens ({selectedClients.length})
               </Button>
             </div>
           </CardContent>

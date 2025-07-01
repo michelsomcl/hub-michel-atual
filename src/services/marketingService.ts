@@ -142,6 +142,36 @@ export const updateMarketingMessages = async (
 };
 
 /**
+ * Deleta mensagens de marketing para clientes selecionados
+ */
+export const deleteMarketingMessages = async (
+  clientIds: string[]
+): Promise<boolean> => {
+  try {
+    console.log("Deletando mensagens para clientes:", clientIds);
+
+    const { error } = await supabase
+      .from('marketing_messages')
+      .update({ 
+        message: null,
+        updated_at: new Date().toISOString()
+      })
+      .in('client_id', clientIds);
+
+    if (error) {
+      console.error('Erro ao deletar mensagens:', error);
+      return false;
+    }
+
+    console.log("Mensagens deletadas com sucesso");
+    return true;
+  } catch (error) {
+    console.error('Erro ao deletar mensagens:', error);
+    return false;
+  }
+};
+
+/**
  * Envia dados para webhook do n8n
  */
 export const sendToWebhook = async (
